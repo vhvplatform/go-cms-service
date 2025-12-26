@@ -39,12 +39,12 @@ services:
       timeout: 3s
       retries: 5
 
-  # CMS Service
-  cms-service:
+  # CMS Admin Service
+  cms-admin-service:
     build:
       context: .
-      dockerfile: services/cms-service/Dockerfile
-    container_name: cms-service
+      dockerfile: services/cms-admin-service/Dockerfile
+    container_name: cms-admin-service
     restart: unless-stopped
     ports:
       - "8080:8080"
@@ -63,11 +63,14 @@ services:
       - SCHEDULER_INTERVAL=60s
       - LOG_LEVEL=info
       - BASE_URL=http://localhost:8080
+      - UPLOAD_DIR=/app/uploads
     depends_on:
       mongodb:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - admin_uploads:/app/uploads
     networks:
       - cms-network
     healthcheck:
@@ -103,6 +106,68 @@ services:
       retries: 3
       start_period: 40s
 
+  # CMS Frontend Service (Public API)
+  cms-frontend-service:
+    build:
+      context: .
+      dockerfile: services/cms-frontend-service/Dockerfile
+    container_name: cms-frontend-service
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      - SERVER_PORT=8082
+      - CMS_SERVICE_URL=http://cms-admin-service:8080
+      - STATS_SERVICE_URL=http://cms-stats-service:8081
+      - REDIS_ADDR=redis:6379
+      - CACHE_TTL=300
+      - LOG_LEVEL=info
+    depends_on:
+      cms-admin-service:
+        condition: service_healthy
+      cms-stats-service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cms-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # CMS Media Service (Media Processing & Storage)
+  cms-media-service:
+    build:
+      context: .
+      dockerfile: services/cms-media-service/Dockerfile
+    container_name: cms-media-service
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      - SERVER_PORT=8083
+      - MONGODB_URI=mongodb://mongodb:27017
+      - MONGODB_DATABASE=cms_media
+      - UPLOAD_DIR=/app/uploads
+      - BASE_URL=http://localhost:8083
+      - LOG_LEVEL=info
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - media_uploads:/app/uploads
+    networks:
+      - cms-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8083/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
 networks:
   cms-network:
     driver: bridge
@@ -113,4 +178,8 @@ volumes:
   mongodb_config:
     driver: local
   redis_data:
+    driver: local
+  admin_uploads:
+    driver: local
+  media_uploads:
     driver: local
