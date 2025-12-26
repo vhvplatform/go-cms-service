@@ -1,7 +1,7 @@
 .PHONY: help build run test lint clean docker-build docker-up docker-down migrate
 
 # Variables
-APP_NAME=article-service
+APP_NAME=cms-service
 DOCKER_COMPOSE=docker-compose
 GO=go
 GOTEST=$(GO) test
@@ -16,12 +16,12 @@ help: ## Show this help message
 
 build: ## Build the application
 	@echo "Building $(APP_NAME)..."
-	cd services/article-service && $(GO) build -o ../../bin/$(APP_NAME) cmd/main.go
+	cd services/cms-service && $(GO) build -o ../../bin/$(APP_NAME) cmd/main.go
 	@echo "Build complete: bin/$(APP_NAME)"
 
 run: ## Run the application locally
 	@echo "Running $(APP_NAME)..."
-	cd services/article-service && $(GO) run cmd/main.go
+	cd services/cms-service && $(GO) run cmd/main.go
 
 test: ## Run tests
 	@echo "Running tests..."
@@ -77,7 +77,7 @@ docker-ps: ## List running containers
 
 migrate: ## Run database migrations
 	@echo "Running migrations..."
-	cd services/article-service && $(GO) run cmd/main.go --migrate-only
+	cd services/cms-service && $(GO) run cmd/main.go --migrate-only
 
 deps: ## Download dependencies
 	@echo "Downloading dependencies..."
