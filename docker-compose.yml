@@ -39,12 +39,12 @@ services:
       timeout: 3s
       retries: 5
 
-  # Article Service
-  article-service:
+  # CMS Service
+  cms-service:
     build:
       context: .
-      dockerfile: services/article-service/Dockerfile
-    container_name: cms-article-service
+      dockerfile: services/cms-service/Dockerfile
+    container_name: cms-service
     restart: unless-stopped
     ports:
       - "8080:8080"

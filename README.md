@@ -39,7 +39,7 @@ curl http://localhost:8080/health
 
 ```bash
 # Install dependencies
-cd services/article-service
+cd services/cms-service
 go mod download
 
 # Set environment variables
@@ -54,13 +54,13 @@ go run cmd/main.go
 
 ## Documentation
 
-- [**Development Guide**](services/article-service/docs/DEVELOPMENT.md) - Complete architecture, code standards, and extension guide
-- [**API Documentation**](services/article-service/docs/openapi.yaml) - OpenAPI/Swagger specification
+- [**Development Guide**](services/cms-service/docs/DEVELOPMENT.md) - Complete architecture, code standards, and extension guide
+- [**API Documentation**](services/cms-service/docs/openapi.yaml) - OpenAPI/Swagger specification
 
 ## Project Structure
 
 ```
-services/article-service/
+services/cms-service/
 ├── cmd/                    # Application entry points
 ├── internal/
 │   ├── cache/             # Caching layer (Redis + Memory)
