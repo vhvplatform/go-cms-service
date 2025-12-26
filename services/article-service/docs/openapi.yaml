@@ -1,0 +1,642 @@
+openapi: 3.0.3
+info:
+  title: Article Management Service API
+  description: |
+    Comprehensive article management system with multi-type support, permissions, caching, and statistics.
+    
+    ## Features
+    - Multi-type articles (14+ types)
+    - Role-based access control
+    - Permission groups by categories
+    - Redis caching for public APIs
+    - Queue-based view counting
+    - Scheduled publishing
+    - Full-text search
+    
+  version: 1.0.0
+  contact:
+    name: VHV Platform
+    email: dev@vhvplatform.com
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+  - url: https://api.vhvplatform.com
+    description: Production server
+
+tags:
+  - name: Articles (Admin)
+    description: Article management endpoints for administrators
+  - name: Articles (Public)
+    description: Public article endpoints with caching
+  - name: Categories
+    description: Category management
+  - name: Permission Groups
+    description: Permission group management
+  - name: Statistics
+    description: Analytics and reporting
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: OK
+
+  /api/v1/articles:
+    post:
+      tags:
+        - Articles (Admin)
+      summary: Create a new article
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArticleInput'
+      responses:
+        '201':
+          description: Article created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Article'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    
+    get:
+      tags:
+        - Articles (Admin)
+      summary: List articles with filters
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/CategoryId'
+        - $ref: '#/components/parameters/ArticleType'
+        - $ref: '#/components/parameters/Status'
+        - $ref: '#/components/parameters/EventStreamId'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: List of articles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleListResponse'
+
+  /api/v1/articles/{id}:
+    get:
+      tags:
+        - Articles (Admin)
+      summary: Get article by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ArticleId'
+      responses:
+        '200':
+          description: Article details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Article'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    
+    patch:
+      tags:
+        - Articles (Admin)
+      summary: Update article
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ArticleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArticleInput'
+      responses:
+        '200':
+          description: Article updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Article'
+        '403':
+          description: Cannot edit reviewed article
+    
+    delete:
+      tags:
+        - Articles (Admin)
+      summary: Delete article (soft delete)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ArticleId'
+      responses:
+        '200':
+          description: Article deleted successfully
+
+  /api/v1/articles/{id}/publish:
+    post:
+      tags:
+        - Articles (Admin)
+      summary: Publish an article
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ArticleId'
+      responses:
+        '200':
+          description: Article published successfully
+        '403':
+          description: Insufficient permissions
+
+  /api/v1/articles/reorder:
+    post:
+      tags:
+        - Articles (Admin)
+      summary: Reorder articles
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                articles:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      ordering:
+                        type: integer
+      responses:
+        '200':
+          description: Articles reordered successfully
+
+  /api/v1/public/articles:
+    get:
+      tags:
+        - Articles (Public)
+      summary: List published articles (cached)
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/CategoryId'
+        - $ref: '#/components/parameters/ArticleType'
+        - $ref: '#/components/parameters/EventStreamId'
+        - name: featured
+          in: query
+          schema:
+            type: boolean
+        - name: hot
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of published articles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleListResponse'
+
+  /api/v1/public/articles/{id}:
+    get:
+      tags:
+        - Articles (Public)
+      summary: Get published article (cached)
+      parameters:
+        - $ref: '#/components/parameters/ArticleId'
+      responses:
+        '200':
+          description: Article details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Article'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/public/articles/{id}/view:
+    post:
+      tags:
+        - Articles (Public)
+      summary: Record article view (queued)
+      parameters:
+        - $ref: '#/components/parameters/ArticleId'
+      responses:
+        '200':
+          description: View recorded
+
+  /api/v1/search:
+    get:
+      tags:
+        - Articles (Admin)
+      summary: Full-text search articles
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleListResponse'
+
+  /api/v1/categories:
+    post:
+      tags:
+        - Categories
+      summary: Create category
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+      responses:
+        '201':
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+
+  /api/v1/categories/tree:
+    get:
+      tags:
+        - Categories
+      summary: Get category tree
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Category tree structure
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryNode'
+
+  /api/v1/permission-groups:
+    post:
+      tags:
+        - Permission Groups
+      summary: Create permission group
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PermissionGroupInput'
+      responses:
+        '201':
+          description: Permission group created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionGroup'
+    
+    get:
+      tags:
+        - Permission Groups
+      summary: List permission groups
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: List of permission groups
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ArticleId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    CategoryId:
+      name: categoryId
+      in: query
+      schema:
+        type: string
+    ArticleType:
+      name: articleType
+      in: query
+      schema:
+        type: string
+        enum: [News, Video, PhotoGallery, LegalDocument, StaffProfile, Job, Procedure, Download, Podcast, EventInfo, Infographic, Destination, Partner, PDF]
+    Status:
+      name: status
+      in: query
+      schema:
+        type: string
+        enum: [draft, pending_review, published, archived, deleted]
+    EventStreamId:
+      name: eventStreamId
+      in: query
+      schema:
+        type: string
+    Search:
+      name: q
+      in: query
+      schema:
+        type: string
+    Sort:
+      name: sort
+      in: query
+      schema:
+        type: string
+        example: "-publishAt"
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Article:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: string
+        slug:
+          type: string
+        articleType:
+          type: string
+          enum: [News, Video, PhotoGallery, LegalDocument, StaffProfile, Job, Procedure, Download, Podcast, EventInfo, Infographic, Destination, Partner, PDF]
+        categoryId:
+          type: string
+        eventStreamId:
+          type: string
+        summary:
+          type: string
+        content:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [draft, pending_review, published, archived, deleted]
+        featured:
+          type: boolean
+        hot:
+          type: boolean
+        publishAt:
+          type: string
+          format: date-time
+        expiredAt:
+          type: string
+          format: date-time
+        viewCount:
+          type: integer
+        accessControl:
+          $ref: '#/components/schemas/AccessControl'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ArticleInput:
+      type: object
+      required:
+        - title
+        - articleType
+        - categoryId
+      properties:
+        title:
+          type: string
+        subtitle:
+          type: string
+        articleType:
+          type: string
+        categoryId:
+          type: string
+        summary:
+          type: string
+        content:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        publishAt:
+          type: string
+          format: date-time
+
+    ArticleListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Article'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        categoryType:
+          type: string
+          enum: [Article, Link]
+        articleType:
+          type: string
+        categoryLink:
+          type: string
+        parentId:
+          type: string
+
+    CategoryInput:
+      type: object
+      required:
+        - name
+        - categoryType
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        categoryType:
+          type: string
+          enum: [Article, Link]
+        articleType:
+          type: string
+        categoryLink:
+          type: string
+        parentId:
+          type: string
+
+    CategoryNode:
+      type: object
+      properties:
+        category:
+          $ref: '#/components/schemas/Category'
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryNode'
+
+    PermissionGroup:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        categoryIds:
+          type: array
+          items:
+            type: string
+        userIds:
+          type: array
+          items:
+            type: string
+        role:
+          type: string
+          enum: [writer, editor, moderator]
+
+    PermissionGroupInput:
+      type: object
+      required:
+        - name
+        - categoryIds
+        - role
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        categoryIds:
+          type: array
+          items:
+            type: string
+        userIds:
+          type: array
+          items:
+            type: string
+        role:
+          type: string
+          enum: [writer, editor, moderator]
+
+    AccessControl:
+      type: object
+      properties:
+        isPublic:
+          type: boolean
+        requiresLogin:
+          type: boolean
+        allowedUserIds:
+          type: array
+          items:
+            type: string
+        allowedRoles:
+          type: array
+          items:
+            type: string
+        isPremium:
+          type: boolean
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
