@@ -29,7 +29,7 @@ func (r *PermissionGroupRepository) Create(ctx context.Context, group *model.Per
 	group.ID = primitive.NewObjectID()
 	group.CreatedAt = time.Now()
 	group.UpdatedAt = time.Now()
-	
+
 	_, err := r.collection.InsertOne(ctx, group)
 	return err
 }
@@ -50,10 +50,10 @@ func (r *PermissionGroupRepository) FindByID(ctx context.Context, id primitive.O
 // Update updates a permission group
 func (r *PermissionGroupRepository) Update(ctx context.Context, group *model.PermissionGroup) error {
 	group.UpdatedAt = time.Now()
-	
+
 	filter := bson.M{"_id": group.ID}
 	update := bson.M{"$set": group}
-	
+
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
 }
@@ -223,7 +223,7 @@ func (r *PermissionGroupRepository) AddUserToGroup(ctx context.Context, groupID 
 		"$addToSet": bson.M{"userIds": userID},
 		"$set":      bson.M{"updatedAt": time.Now()},
 	}
-	
+
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
 }
@@ -235,7 +235,7 @@ func (r *PermissionGroupRepository) RemoveUserFromGroup(ctx context.Context, gro
 		"$pull": bson.M{"userIds": userID},
 		"$set":  bson.M{"updatedAt": time.Now()},
 	}
-	
+
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
 }
@@ -247,7 +247,7 @@ func (r *PermissionGroupRepository) AddCategoryToGroup(ctx context.Context, grou
 		"$addToSet": bson.M{"categoryIds": categoryID},
 		"$set":      bson.M{"updatedAt": time.Now()},
 	}
-	
+
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
 }
@@ -259,7 +259,7 @@ func (r *PermissionGroupRepository) RemoveCategoryFromGroup(ctx context.Context,
 		"$pull": bson.M{"categoryIds": categoryID},
 		"$set":  bson.M{"updatedAt": time.Now()},
 	}
-	
+
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
 }

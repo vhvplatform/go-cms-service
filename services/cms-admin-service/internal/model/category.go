@@ -21,7 +21,7 @@ type Category struct {
 	Slug         string              `json:"slug" bson:"slug"`
 	Description  string              `json:"description" bson:"description"`
 	CategoryType CategoryType        `json:"categoryType" bson:"categoryType"`
-	ArticleType  ArticleType         `json:"articleType,omitempty" bson:"articleType,omitempty"` // Only for CategoryType == Article
+	ArticleType  ArticleType         `json:"articleType,omitempty" bson:"articleType,omitempty"`   // Only for CategoryType == Article
 	CategoryLink string              `json:"categoryLink,omitempty" bson:"categoryLink,omitempty"` // Only for CategoryType == Link
 	ParentID     *primitive.ObjectID `json:"parentId,omitempty" bson:"parentId,omitempty"`
 	Ordering     int                 `json:"ordering" bson:"ordering"`

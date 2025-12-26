@@ -22,9 +22,9 @@ type Tenant struct {
 type TenantArticleTypeConfig struct {
 	ID                primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	TenantID          primitive.ObjectID `json:"tenantId" bson:"tenantId"`
-	AllowedTypes      []ArticleType      `json:"allowedTypes" bson:"allowedTypes"`         // Article types this tenant can use
-	DisallowedTypes   []ArticleType      `json:"disallowedTypes" bson:"disallowedTypes"`   // Explicitly disallowed types
-	AllowAllTypes     bool               `json:"allowAllTypes" bson:"allowAllTypes"`       // If true, all types are allowed
+	AllowedTypes      []ArticleType      `json:"allowedTypes" bson:"allowedTypes"`           // Article types this tenant can use
+	DisallowedTypes   []ArticleType      `json:"disallowedTypes" bson:"disallowedTypes"`     // Explicitly disallowed types
+	AllowAllTypes     bool               `json:"allowAllTypes" bson:"allowAllTypes"`         // If true, all types are allowed
 	CustomTypeConfigs []CustomTypeConfig `json:"customTypeConfigs" bson:"customTypeConfigs"` // Custom configurations per type
 	CreatedAt         time.Time          `json:"createdAt" bson:"createdAt"`
 	UpdatedAt         time.Time          `json:"updatedAt" bson:"updatedAt"`

@@ -31,12 +31,12 @@ func (r *PollRepository) Create(ctx context.Context, poll *model.Poll) error {
 	poll.CreatedAt = time.Now()
 	poll.UpdatedAt = time.Now()
 	poll.TotalVotes = 0
-	
+
 	// Initialize vote counts for all options
 	for i := range poll.Options {
 		poll.Options[i].VoteCount = 0
 	}
-	
+
 	_, err := r.collection.InsertOne(ctx, poll)
 	return err
 }
@@ -51,10 +51,10 @@ func (r *PollRepository) FindByID(ctx context.Context, id primitive.ObjectID) (*
 		}
 		return nil, err
 	}
-	
+
 	// Calculate percentages
 	r.calculatePercentages(&poll)
-	
+
 	return &poll, nil
 }
 
@@ -68,20 +68,20 @@ func (r *PollRepository) FindByArticleID(ctx context.Context, articleID primitiv
 		}
 		return nil, err
 	}
-	
+
 	// Calculate percentages
 	r.calculatePercentages(&poll)
-	
+
 	return &poll, nil
 }
 
 // Update updates a poll
 func (r *PollRepository) Update(ctx context.Context, poll *model.Poll) error {
 	poll.UpdatedAt = time.Now()
-	
+
 	filter := bson.M{"_id": poll.ID}
 	update := bson.M{"$set": poll}
-	
+
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
 }
@@ -96,57 +96,57 @@ func (r *PollRepository) Vote(ctx context.Context, vote *model.PollVote) error {
 	if existing.Err() == nil {
 		return fmt.Errorf("user has already voted on this poll")
 	}
-	
+
 	// Get poll to validate options and check if active
 	poll, err := r.FindByID(ctx, vote.PollID)
 	if err != nil {
 		return err
 	}
-	
+
 	if !poll.IsActive {
 		return fmt.Errorf("poll is not active")
 	}
-	
+
 	// Check if poll has ended
 	if poll.EndDate != nil && time.Now().After(*poll.EndDate) {
 		return fmt.Errorf("poll has ended")
 	}
-	
+
 	// Validate option IDs
 	validOptions := make(map[string]bool)
 	for _, opt := range poll.Options {
 		validOptions[opt.ID] = true
 	}
-	
+
 	for _, optID := range vote.OptionIDs {
 		if !validOptions[optID] {
 			return fmt.Errorf("invalid option ID: %s", optID)
 		}
 	}
-	
+
 	// Check multiple selection rules
 	if !poll.IsMultiple && len(vote.OptionIDs) > 1 {
 		return fmt.Errorf("poll does not allow multiple selections")
 	}
-	
+
 	if poll.IsMultiple && poll.MaxSelections > 0 && len(vote.OptionIDs) > poll.MaxSelections {
 		return fmt.Errorf("exceeded maximum selections: %d", poll.MaxSelections)
 	}
-	
+
 	// Create vote
 	vote.ID = primitive.NewObjectID()
 	vote.CreatedAt = time.Now()
-	
+
 	if _, err := r.voteCollection.InsertOne(ctx, vote); err != nil {
 		return err
 	}
-	
+
 	// Update poll vote counts
 	update := bson.M{
 		"$inc": bson.M{"totalVotes": 1},
 		"$set": bson.M{"updatedAt": time.Now()},
 	}
-	
+
 	// Increment vote count for each selected option
 	for _, optID := range vote.OptionIDs {
 		for i, opt := range poll.Options {
@@ -157,7 +157,7 @@ func (r *PollRepository) Vote(ctx context.Context, vote *model.PollVote) error {
 			}
 		}
 	}
-	
+
 	_, err = r.collection.UpdateOne(ctx, bson.M{"_id": vote.PollID}, update)
 	return err
 }
@@ -200,7 +200,7 @@ func (r *PollRepository) SetPollStatus(ctx context.Context, pollID primitive.Obj
 			"updatedAt": time.Now(),
 		},
 	}
-	
+
 	_, err := r.collection.UpdateOne(ctx, bson.M{"_id": pollID}, update)
 	return err
 }
@@ -213,7 +213,7 @@ func (r *PollRepository) calculatePercentages(poll *model.Poll) {
 		}
 		return
 	}
-	
+
 	for i := range poll.Options {
 		poll.Options[i].Percentage = float64(poll.Options[i].VoteCount) / float64(poll.TotalVotes) * 100
 	}

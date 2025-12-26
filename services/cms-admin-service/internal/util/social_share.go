@@ -32,7 +32,7 @@ func (s *SocialMediaSharer) GenerateShareURLs(article *model.Article) *SocialSha
 	articleURL := s.getArticleURL(article)
 	title := article.Title
 	summary := article.Summary
-	
+
 	return &SocialShareURLs{
 		Facebook: s.GenerateFacebookURL(articleURL, title),
 		Twitter:  s.GenerateTwitterURL(articleURL, title, article.Tags),
@@ -45,7 +45,7 @@ func (s *SocialMediaSharer) GenerateFacebookURL(articleURL, title string) string
 	params := url.Values{}
 	params.Add("u", articleURL)
 	params.Add("quote", title)
-	
+
 	return fmt.Sprintf("https://www.facebook.com/sharer/sharer.php?%s", params.Encode())
 }
 
@@ -54,7 +54,7 @@ func (s *SocialMediaSharer) GenerateTwitterURL(articleURL, title string, tags []
 	params := url.Values{}
 	params.Add("url", articleURL)
 	params.Add("text", title)
-	
+
 	// Add hashtags (max 3 for better UX)
 	if len(tags) > 0 {
 		hashtags := tags
@@ -63,7 +63,7 @@ func (s *SocialMediaSharer) GenerateTwitterURL(articleURL, title string, tags []
 		}
 		params.Add("hashtags", strings.Join(hashtags, ","))
 	}
-	
+
 	return fmt.Sprintf("https://twitter.com/intent/tweet?%s", params.Encode())
 }
 
@@ -75,7 +75,7 @@ func (s *SocialMediaSharer) GenerateLinkedInURL(articleURL, title, summary strin
 	if summary != "" {
 		params.Add("summary", summary)
 	}
-	
+
 	return fmt.Sprintf("https://www.linkedin.com/sharing/share-offsite/?%s", params.Encode())
 }
 

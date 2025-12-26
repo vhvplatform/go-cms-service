@@ -13,11 +13,11 @@ import (
 )
 
 type CrawlerService struct {
-	articleRepo     *repository.CrawlerArticleRepository
-	sourceRepo      *repository.CrawlerSourceRepository
-	campaignRepo    *repository.CrawlerCampaignRepository
-	extractor       *crawler.ContentExtractor
-	similarityCalc  *crawler.SimilarityCalculator
+	articleRepo    *repository.CrawlerArticleRepository
+	sourceRepo     *repository.CrawlerSourceRepository
+	campaignRepo   *repository.CrawlerCampaignRepository
+	extractor      *crawler.ContentExtractor
+	similarityCalc *crawler.SimilarityCalculator
 }
 
 func NewCrawlerService(
@@ -40,11 +40,11 @@ func (s *CrawlerService) RunCampaign(ctx context.Context, campaignID primitive.O
 	if err != nil {
 		return err
 	}
-	
+
 	if !campaign.IsActive {
 		return fmt.Errorf("campaign is not active")
 	}
-	
+
 	// Get all sources for this campaign
 	for _, sourceID := range campaign.SourceIDs {
 		source, err := s.sourceRepo.GetByID(ctx, sourceID)
@@ -52,16 +52,16 @@ func (s *CrawlerService) RunCampaign(ctx context.Context, campaignID primitive.O
 			log.Printf("Failed to get source %s: %v", sourceID.Hex(), err)
 			continue
 		}
-		
+
 		if !source.IsActive {
 			continue
 		}
-		
+
 		// Apply delay between requests
 		if source.DelayMs > 0 {
 			time.Sleep(time.Duration(source.DelayMs) * time.Millisecond)
 		}
-		
+
 		// Crawl the source
 		if err := s.CrawlSource(ctx, source, campaign); err != nil {
 			log.Printf("Failed to crawl source %s: %v", source.Name, err)
@@ -74,10 +74,10 @@ func (s *CrawlerService) RunCampaign(ctx context.Context, campaignID primitive.O
 			}
 		}
 	}
-	
+
 	// Update campaign last run
 	s.campaignRepo.UpdateLastRun(ctx, campaignID)
-	
+
 	return nil
 }
 
@@ -85,7 +85,7 @@ func (s *CrawlerService) RunCampaign(ctx context.Context, campaignID primitive.O
 func (s *CrawlerService) CrawlSource(ctx context.Context, source *model.CrawlerSource, campaign *model.CrawlerCampaign) error {
 	var articles []*model.CrawlerArticle
 	var err error
-	
+
 	switch source.Type {
 	case "html":
 		article, err := s.extractor.Extract(ctx, source.URL, source.ExtractionConfig, source)
@@ -93,22 +93,22 @@ func (s *CrawlerService) CrawlSource(ctx context.Context, source *model.CrawlerS
 			return err
 		}
 		articles = []*model.CrawlerArticle{article}
-		
+
 	case "rss":
 		articles, err = s.extractor.ExtractFromRSS(ctx, source.URL, source)
 		if err != nil {
 			return err
 		}
-		
+
 	default:
 		return fmt.Errorf("unsupported source type: %s", source.Type)
 	}
-	
+
 	// Process each extracted article
 	for _, article := range articles {
 		article.CampaignID = campaign.ID
 		article.TenantID = campaign.TenantID
-		
+
 		// Check for duplicates
 		duplicates, err := s.articleRepo.FindDuplicates(ctx, article.ContentHash)
 		if err != nil {
@@ -118,25 +118,25 @@ func (s *CrawlerService) CrawlSource(ctx context.Context, source *model.CrawlerS
 			log.Printf("Duplicate article found: %s", article.Title)
 			continue
 		}
-		
+
 		// Set auto-approve status
 		if source.AutoApprove || campaign.AutoApprove {
 			article.Status = "approved"
 			article.ApprovedAt = time.Now()
 		}
-		
+
 		// Save article
 		if err := s.articleRepo.Create(ctx, article); err != nil {
 			log.Printf("Failed to save article: %v", err)
 			continue
 		}
-		
+
 		// If auto-approved, find similar articles for grouping
 		if article.Status == "approved" {
 			s.findAndGroupSimilar(ctx, article)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -147,21 +147,21 @@ func (s *CrawlerService) findAndGroupSimilar(ctx context.Context, article *model
 	if err != nil {
 		return
 	}
-	
+
 	similarThreshold := 0.7 // 70% similarity
 	var similarArticles []*model.CrawlerArticle
-	
+
 	for _, other := range recentArticles {
 		if other.ID == article.ID {
 			continue
 		}
-		
+
 		similarity := s.similarityCalc.CalculateSimilarity(article.Content, other.Content)
 		if similarity >= similarThreshold {
 			similarArticles = append(similarArticles, other)
 		}
 	}
-	
+
 	// If we found similar articles, create or update group
 	if len(similarArticles) > 0 {
 		log.Printf("Found %d similar articles for: %s", len(similarArticles), article.Title)
@@ -185,7 +185,7 @@ func (s *CrawlerService) CleanupOldArticles(ctx context.Context, tenantID string
 	if err != nil {
 		return err
 	}
-	
+
 	for _, campaign := range campaigns {
 		if campaign.RetentionDays > 0 {
 			beforeDate := time.Now().AddDate(0, 0, -campaign.RetentionDays)
@@ -197,7 +197,7 @@ func (s *CrawlerService) CleanupOldArticles(ctx context.Context, tenantID string
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -212,20 +212,20 @@ func (s *CrawlerService) ConvertToArticle(ctx context.Context, crawlerArticleID 
 	if err != nil {
 		return primitive.NilObjectID, err
 	}
-	
+
 	if article.Status != "approved" {
 		return primitive.NilObjectID, fmt.Errorf("article must be approved before conversion")
 	}
-	
+
 	// TODO: Integrate with CMS admin service to create the actual article
 	// This would involve calling the CMS service API to create the article
 	// and storing the returned article ID in the ConvertedToID field
-	
+
 	// For now, just update the status to mark as converted
 	if err := s.articleRepo.UpdateStatus(ctx, crawlerArticleID, "converted", userID); err != nil {
 		return primitive.NilObjectID, err
 	}
-	
+
 	// Return error indicating this feature needs CMS service integration
 	return primitive.NilObjectID, fmt.Errorf("article conversion requires CMS service integration - article marked as converted")
 }

@@ -61,7 +61,7 @@ func (s *SensitiveKeywordService) ScanContent(ctx context.Context, tenantID, con
 	if err != nil {
 		return nil, err
 	}
-	
+
 	result := &model.ContentScanResult{
 		HasViolations:     false,
 		Results:           []model.KeywordDetectionResult{},
@@ -69,16 +69,16 @@ func (s *SensitiveKeywordService) ScanContent(ctx context.Context, tenantID, con
 		RecommendedAction: "none",
 		ScannedAt:         time.Now(),
 	}
-	
+
 	severityLevels := map[string]int{"low": 1, "medium": 2, "high": 3, "critical": 4}
 	highestLevel := 0
-	
+
 	contentLower := strings.ToLower(content)
-	
+
 	for _, kw := range keywords {
 		var matches []string
 		var positions []int
-		
+
 		if kw.IsRegex {
 			// Regex matching
 			re, err := regexp.Compile("(?i)" + kw.Keyword)
@@ -113,7 +113,7 @@ func (s *SensitiveKeywordService) ScanContent(ctx context.Context, tenantID, con
 				index = actualPos + keywordLen
 			}
 		}
-		
+
 		if len(matches) > 0 {
 			result.HasViolations = true
 			result.Results = append(result.Results, model.KeywordDetectionResult{
@@ -125,7 +125,7 @@ func (s *SensitiveKeywordService) ScanContent(ctx context.Context, tenantID, con
 				Category:    kw.Category,
 				Description: kw.Description,
 			})
-			
+
 			// Track highest severity
 			if level, ok := severityLevels[kw.Severity]; ok && level > highestLevel {
 				highestLevel = level
@@ -134,7 +134,7 @@ func (s *SensitiveKeywordService) ScanContent(ctx context.Context, tenantID, con
 			}
 		}
 	}
-	
+
 	return result, nil
 }
 

@@ -33,43 +33,43 @@ func (e *ContentExtractor) Extract(ctx context.Context, sourceURL string, config
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Set user agent
 	if len(source.UserAgents) > 0 {
 		req.Header.Set("User-Agent", source.UserAgents[0])
 	} else {
 		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
 	}
-	
+
 	// Set custom headers
 	for key, value := range source.Headers {
 		req.Header.Set(key, value)
 	}
-	
+
 	// Execute request
 	resp, err := e.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch URL: status %d", resp.StatusCode)
 	}
-	
+
 	// Parse HTML
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	article := &model.CrawlerArticle{
 		SourceURL: sourceURL,
 		SourceID:  source.ID,
 		TenantID:  source.TenantID,
 		Status:    "pending",
 	}
-	
+
 	// Extract title
 	if config.TitleSelector != "" {
 		article.Title = strings.TrimSpace(doc.Find(config.TitleSelector).First().Text())
@@ -78,14 +78,14 @@ func (e *ContentExtractor) Extract(ctx context.Context, sourceURL string, config
 		// For now, fallback to basic extraction
 		article.Title = strings.TrimSpace(doc.Find("title").First().Text())
 	}
-	
+
 	// Extract content
 	if config.ContentSelector != "" {
 		// Remove unwanted elements first
 		for _, selector := range config.RemoveSelectors {
 			doc.Find(selector).Remove()
 		}
-		
+
 		contentNode := doc.Find(config.ContentSelector).First()
 		if config.UseReadability {
 			// Use readability algorithm
@@ -95,7 +95,7 @@ func (e *ContentExtractor) Extract(ctx context.Context, sourceURL string, config
 			article.Content = strings.TrimSpace(html)
 		}
 	}
-	
+
 	// Extract image
 	if config.ImageSelector != "" {
 		imgNode := doc.Find(config.ImageSelector).First()
@@ -103,12 +103,12 @@ func (e *ContentExtractor) Extract(ctx context.Context, sourceURL string, config
 			article.ImageURL = e.resolveURL(sourceURL, imgSrc)
 		}
 	}
-	
+
 	// Extract author
 	if config.AuthorSelector != "" {
 		article.Author = strings.TrimSpace(doc.Find(config.AuthorSelector).First().Text())
 	}
-	
+
 	// Extract tags
 	if config.TagsSelector != "" {
 		doc.Find(config.TagsSelector).Each(func(i int, s *goquery.Selection) {
@@ -118,14 +118,14 @@ func (e *ContentExtractor) Extract(ctx context.Context, sourceURL string, config
 			}
 		})
 	}
-	
+
 	// Generate content hash for duplicate detection
 	article.ContentHash = e.generateContentHash(article.Title + article.Content)
-	
+
 	// Store raw HTML if needed
 	rawHTML, _ := doc.Html()
 	article.RawHTML = rawHTML
-	
+
 	return article, nil
 }
 
@@ -133,10 +133,10 @@ func (e *ContentExtractor) Extract(ctx context.Context, sourceURL string, config
 func (e *ContentExtractor) extractReadableContent(node *goquery.Selection) string {
 	// Remove script and style tags
 	node.Find("script, style").Remove()
-	
+
 	// Get text content
 	text := node.Text()
-	
+
 	// Clean up whitespace
 	lines := strings.Split(text, "\n")
 	var cleanLines []string
@@ -146,7 +146,7 @@ func (e *ContentExtractor) extractReadableContent(node *goquery.Selection) strin
 			cleanLines = append(cleanLines, trimmed)
 		}
 	}
-	
+
 	return strings.Join(cleanLines, "\n")
 }
 
@@ -156,12 +156,12 @@ func (e *ContentExtractor) resolveURL(baseURL, relativeURL string) string {
 	if err != nil {
 		return relativeURL
 	}
-	
+
 	rel, err := url.Parse(relativeURL)
 	if err != nil {
 		return relativeURL
 	}
-	
+
 	return base.ResolveReference(rel).String()
 }
 
@@ -179,41 +179,41 @@ func (e *ContentExtractor) ExtractFromRSS(ctx context.Context, feedURL string, s
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Set user agent
 	if len(source.UserAgents) > 0 {
 		req.Header.Set("User-Agent", source.UserAgents[0])
 	}
-	
+
 	resp, err := e.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch RSS: status %d", resp.StatusCode)
 	}
-	
+
 	// Parse XML/RSS feed using goquery for basic extraction
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var articles []*model.CrawlerArticle
-	
+
 	// Extract items from RSS feed
 	doc.Find("item").Each(func(i int, s *goquery.Selection) {
 		article := &model.CrawlerArticle{
-			SourceID:  source.ID,
-			TenantID:  source.TenantID,
-			Status:    "pending",
+			SourceID: source.ID,
+			TenantID: source.TenantID,
+			Status:   "pending",
 		}
-		
+
 		// Extract title
 		article.Title = strings.TrimSpace(s.Find("title").Text())
-		
+
 		// Extract description/content
 		content := s.Find("description").Text()
 		if content == "" {
@@ -221,16 +221,16 @@ func (e *ContentExtractor) ExtractFromRSS(ctx context.Context, feedURL string, s
 			content = s.Find("encoded").Text()
 		}
 		article.Content = strings.TrimSpace(content)
-		
+
 		// Extract link as source URL
 		article.SourceURL = strings.TrimSpace(s.Find("link").Text())
-		
+
 		// Extract author
 		article.Author = strings.TrimSpace(s.Find("author").Text())
 		if article.Author == "" {
 			article.Author = strings.TrimSpace(s.Find("dc\\:creator").Text())
 		}
-		
+
 		// Extract categories as tags
 		s.Find("category").Each(func(j int, cat *goquery.Selection) {
 			tag := strings.TrimSpace(cat.Text())
@@ -238,15 +238,15 @@ func (e *ContentExtractor) ExtractFromRSS(ctx context.Context, feedURL string, s
 				article.Tags = append(article.Tags, tag)
 			}
 		})
-		
+
 		// Generate content hash
 		article.ContentHash = e.generateContentHash(article.Title + article.Content)
-		
+
 		if article.Title != "" && article.Content != "" {
 			articles = append(articles, article)
 		}
 	})
-	
+
 	return articles, nil
 }
 
@@ -262,25 +262,25 @@ func (s *SimilarityCalculator) CalculateSimilarity(text1, text2 string) float64 
 	// Simplified Jaccard similarity
 	words1 := s.tokenize(text1)
 	words2 := s.tokenize(text2)
-	
+
 	intersection := 0
 	union := make(map[string]bool)
-	
+
 	for word := range words1 {
 		union[word] = true
 		if words2[word] {
 			intersection++
 		}
 	}
-	
+
 	for word := range words2 {
 		union[word] = true
 	}
-	
+
 	if len(union) == 0 {
 		return 0
 	}
-	
+
 	return float64(intersection) / float64(len(union))
 }
 
@@ -288,7 +288,7 @@ func (s *SimilarityCalculator) tokenize(text string) map[string]bool {
 	words := make(map[string]bool)
 	text = strings.ToLower(text)
 	tokens := strings.Fields(text)
-	
+
 	for _, token := range tokens {
 		// Remove punctuation
 		token = strings.Trim(token, ".,!?;:()[]{}\"'")
@@ -296,6 +296,6 @@ func (s *SimilarityCalculator) tokenize(text string) map[string]bool {
 			words[token] = true
 		}
 	}
-	
+
 	return words
 }

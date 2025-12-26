@@ -28,7 +28,7 @@ func (r *RejectionNoteRepository) Create(ctx context.Context, note *model.Reject
 	note.ID = primitive.NewObjectID()
 	note.CreatedAt = time.Now()
 	note.UpdatedAt = time.Now()
-	
+
 	_, err := r.collection.InsertOne(ctx, note)
 	return err
 }
@@ -37,18 +37,18 @@ func (r *RejectionNoteRepository) Create(ctx context.Context, note *model.Reject
 func (r *RejectionNoteRepository) FindByArticleID(ctx context.Context, articleID primitive.ObjectID) ([]*model.RejectionNote, error) {
 	filter := bson.M{"articleId": articleID}
 	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: 1}}) // Oldest first for conversation flow
-	
+
 	cursor, err := r.collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var notes []*model.RejectionNote
 	if err := cursor.All(ctx, &notes); err != nil {
 		return nil, err
 	}
-	
+
 	return notes, nil
 }
 
@@ -68,10 +68,10 @@ func (r *RejectionNoteRepository) FindByID(ctx context.Context, id primitive.Obj
 // Update updates a rejection note
 func (r *RejectionNoteRepository) Update(ctx context.Context, note *model.RejectionNote) error {
 	note.UpdatedAt = time.Now()
-	
+
 	filter := bson.M{"_id": note.ID}
 	update := bson.M{"$set": note}
-	
+
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
 }
@@ -85,7 +85,7 @@ func (r *RejectionNoteRepository) MarkAsResolved(ctx context.Context, articleID 
 			"updatedAt":  time.Now(),
 		},
 	}
-	
+
 	_, err := r.collection.UpdateMany(ctx, filter, update)
 	return err
 }
@@ -104,30 +104,30 @@ func (r *RejectionNoteRepository) FindUnresolvedByUserID(ctx context.Context, us
 	// This requires joining with articles collection to filter by createdBy
 	// For now, we'll return all unresolved notes
 	filter := bson.M{"isResolved": false}
-	
+
 	// Count total
 	total, err := r.collection.CountDocuments(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	// Find with pagination
 	opts := options.Find().
 		SetSort(bson.D{{Key: "createdAt", Value: -1}}).
 		SetSkip(int64((page - 1) * limit)).
 		SetLimit(int64(limit))
-	
+
 	cursor, err := r.collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var notes []*model.RejectionNote
 	if err := cursor.All(ctx, &notes); err != nil {
 		return nil, 0, err
 	}
-	
+
 	return notes, total, nil
 }
 

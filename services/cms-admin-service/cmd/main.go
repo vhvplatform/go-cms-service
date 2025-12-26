@@ -2,13 +2,14 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
+	"github.com/vhvplatform/go-cms-service/pkg/config"
+	"github.com/vhvplatform/go-cms-service/pkg/database"
+	"github.com/vhvplatform/go-cms-service/pkg/httpserver"
+	"github.com/vhvplatform/go-cms-service/pkg/logger"
+	pkgMiddleware "github.com/vhvplatform/go-cms-service/pkg/middleware"
 	"github.com/vhvplatform/go-cms-service/services/cms-admin-service/internal/handler"
 	"github.com/vhvplatform/go-cms-service/services/cms-admin-service/internal/middleware"
 	"github.com/vhvplatform/go-cms-service/services/cms-admin-service/internal/migrations"
@@ -16,45 +17,42 @@ import (
 	"github.com/vhvplatform/go-cms-service/services/cms-admin-service/internal/service"
 	"github.com/vhvplatform/go-cms-service/services/cms-admin-service/internal/util"
 	"github.com/vhvplatform/go-cms-service/services/cms-admin-service/internal/worker"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func main() {
 	// Load configuration
-	mongoURI := getEnv("MONGODB_URI", "mongodb://localhost:27017")
-	dbName := getEnv("MONGODB_DATABASE", "cms")
-	serverPort := getEnv("SERVER_PORT", "8080")
-	baseURL := getEnv("BASE_URL", "http://localhost:"+serverPort)
-	uploadDir := getEnv("UPLOAD_DIR", "./uploads")
-	runMigrations := getEnv("RUN_MIGRATIONS", "true") == "true"
+	cfg := config.NewConfig("cms-admin-service")
+	mongoCfg := config.NewMongoConfig()
 
-	log.Println("Starting CMS Service...")
-	log.Printf("MongoDB URI: %s", mongoURI)
-	log.Printf("Database: %s", dbName)
-	log.Printf("Server Port: %s", serverPort)
-	log.Printf("Upload Directory: %s", uploadDir)
+	baseURL := config.GetEnv("BASE_URL", "http://localhost:"+cfg.ServerPort)
+	uploadDir := config.GetEnv("UPLOAD_DIR", "./uploads")
+	runMigrations := config.GetEnvBool("RUN_MIGRATIONS", true)
+
+	// Initialize logger
+	log := logger.New(cfg.ServiceName, cfg.LogLevel)
+
+	log.Info("Starting CMS Admin Service...")
+	log.Info("MongoDB URI: %s", mongoCfg.URI)
+	log.Info("Database: %s", mongoCfg.Database)
+	log.Info("Server Port: %s", cfg.ServerPort)
+	log.Info("Upload Directory: %s", uploadDir)
 
 	// Connect to MongoDB
 	ctx := context.Background()
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
+	mongoClient, err := database.ConnectMongo(ctx, mongoCfg.URI, mongoCfg.Database, mongoCfg.Timeout)
 	if err != nil {
-		log.Fatalf("Failed to connect to MongoDB: %v", err)
+		log.Fatal("Failed to connect to MongoDB: %v", err)
 	}
-	defer client.Disconnect(ctx)
+	defer mongoClient.Close(ctx)
 
-	// Ping MongoDB
-	if err := client.Ping(ctx, nil); err != nil {
-		log.Fatalf("Failed to ping MongoDB: %v", err)
-	}
-	log.Println("✓ Connected to MongoDB")
+	log.Info("✓ Connected to MongoDB")
 
-	db := client.Database(dbName)
+	db := mongoClient.Database
 
 	// Run migrations
 	if runMigrations {
 		if err := migrations.RunMigrations(ctx, db); err != nil {
-			log.Fatalf("Failed to run migrations: %v", err)
+			log.Fatal("Failed to run migrations: %v", err)
 		}
 	}
 
@@ -180,7 +178,7 @@ func main() {
 
 	// Comment routes
 	mux.Handle("/api/v1/comments/pending", authMiddleware.Authenticate(http.HandlerFunc(commentHandler.GetPendingComments)))
-	
+
 	// User favorites route
 	mux.Handle("/api/v1/users/favorites", authMiddleware.Authenticate(http.HandlerFunc(commentHandler.GetUserFavorites)))
 
@@ -276,48 +274,22 @@ func main() {
 	go scheduler.Start(ctx)
 	defer scheduler.Stop()
 
-	// Start HTTP server
-	server := &http.Server{
-		Addr:         ":" + serverPort,
-		Handler:      mux,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+	// Wrap mux with common middleware
+	handler := pkgMiddleware.Chain(
+		pkgMiddleware.LoggingMiddleware(log),
+		pkgMiddleware.RecoveryMiddleware(log),
+	)(mux)
+
+	// Start HTTP server with graceful shutdown
+	serverCfg := httpserver.DefaultConfig(cfg.ServerPort, handler)
+	server := httpserver.NewServer(serverCfg, log)
+
+	if err := server.Start(); err != nil {
+		log.Fatal("Server error: %v", err)
 	}
-
-	// Graceful shutdown
-	go func() {
-		log.Printf("Server starting on port %s", serverPort)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server error: %v", err)
-		}
-	}()
-
-	// Wait for interrupt signal
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	log.Println("Shutting down server...")
-
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
-	}
-
-	log.Println("Server stopped")
-}
-
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
 }
 
 func containsSegment(path, segment string) bool {
-	return len(path) > 0 && (path[len(path)-len(segment):] == segment || 
+	return len(path) > 0 && (path[len(path)-len(segment):] == segment ||
 		len(path) > len(segment) && path[len(path)-len(segment)-1:] == "/"+segment)
 }

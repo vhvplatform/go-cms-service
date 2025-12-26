@@ -41,16 +41,16 @@ func (r *AIConfigRepository) Upsert(ctx context.Context, config *model.AIConfigu
 	if config.CreatedAt.IsZero() {
 		config.CreatedAt = now
 	}
-	
+
 	filter := bson.M{"tenant_id": config.TenantID}
 	update := bson.M{"$set": config}
 	opts := options.Update().SetUpsert(true)
-	
+
 	result, err := r.collection.UpdateOne(ctx, filter, update, opts)
 	if err != nil {
 		return err
 	}
-	
+
 	if result.UpsertedID != nil {
 		config.ID = result.UpsertedID.(primitive.ObjectID)
 	}
@@ -70,7 +70,7 @@ func NewAIOperationLogRepository(db *mongo.Database) *AIOperationLogRepository {
 // Create adds a new operation log
 func (r *AIOperationLogRepository) Create(ctx context.Context, log *model.AIOperationLog) error {
 	log.CreatedAt = time.Now()
-	
+
 	result, err := r.collection.InsertOne(ctx, log)
 	if err != nil {
 		return err
@@ -86,13 +86,13 @@ func (r *AIOperationLogRepository) GetByTenant(ctx context.Context, tenantID str
 		SetSort(bson.M{"created_at": -1}).
 		SetLimit(int64(limit)).
 		SetSkip(int64(skip))
-	
+
 	cursor, err := r.collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var logs []*model.AIOperationLog
 	if err := cursor.All(ctx, &logs); err != nil {
 		return nil, err
@@ -112,27 +112,27 @@ func (r *AIOperationLogRepository) GetUsageStats(ctx context.Context, tenantID s
 			"success": true,
 		}},
 		{"$group": bson.M{
-			"_id":           "$operation",
-			"count":         bson.M{"$sum": 1},
-			"total_tokens":  bson.M{"$sum": "$tokens_used"},
-			"total_cost":    bson.M{"$sum": "$cost"},
-			"avg_duration":  bson.M{"$avg": "$duration_ms"},
+			"_id":          "$operation",
+			"count":        bson.M{"$sum": 1},
+			"total_tokens": bson.M{"$sum": "$tokens_used"},
+			"total_cost":   bson.M{"$sum": "$cost"},
+			"avg_duration": bson.M{"$avg": "$duration_ms"},
 		}},
 	}
-	
+
 	cursor, err := r.collection.Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var results []bson.M
 	if err := cursor.All(ctx, &results); err != nil {
 		return nil, err
 	}
-	
+
 	stats := make(map[string]interface{})
 	stats["operations"] = results
-	
+
 	return stats, nil
 }

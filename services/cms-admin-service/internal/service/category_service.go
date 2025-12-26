@@ -132,6 +132,6 @@ func (s *CategoryService) generateSlug(name string) string {
 
 // CategoryNode represents a node in the category tree
 type CategoryNode struct {
-	Category *model.Category  `json:"category"`
-	Children []*CategoryNode  `json:"children"`
+	Category *model.Category `json:"category"`
+	Children []*CategoryNode `json:"children"`
 }

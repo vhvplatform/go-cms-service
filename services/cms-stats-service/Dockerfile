@@ -1,29 +1,49 @@
+# Build stage
 FROM golang:1.21-alpine AS builder
 
-WORKDIR /app
+# Install build dependencies
+RUN apk add --no-cache git ca-certificates tzdata
 
-# Copy go mod files
-COPY go.mod go.sum* ./
-RUN go mod download
+WORKDIR /build
 
-# Copy source code
+# Copy go mod files for dependency caching
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
+
+# Copy pkg directory (shared infrastructure)
+COPY pkg ./pkg
+
+# Copy service source code
 COPY services/cms-stats-service ./services/cms-stats-service
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /cms-stats-service ./services/cms-stats-service/cmd
+# Build the application with optimizations
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags='-w -s -extldflags "-static"' \
+    -a -installsuffix cgo \
+    -o /app/cms-stats-service \
+    ./services/cms-stats-service/cmd
 
 # Final stage
-FROM alpine:latest
+FROM scratch
 
-RUN apk --no-cache add ca-certificates tzdata
+# Copy timezone data and CA certificates from builder
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-WORKDIR /root/
+# Copy the binary
+COPY --from=builder /app/cms-stats-service /app/cms-stats-service
 
-# Copy the binary from builder
-COPY --from=builder /cms-stats-service .
+# Create non-root user
+USER 65534:65534
+
+WORKDIR /app
 
 # Expose port
 EXPOSE 8081
 
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD ["/app/cms-stats-service", "--health"]
+
 # Run the application
-CMD ["./cms-stats-service"]
+ENTRYPOINT ["/app/cms-stats-service"]

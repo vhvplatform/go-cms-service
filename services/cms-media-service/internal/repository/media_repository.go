@@ -18,12 +18,12 @@ var (
 
 // MediaRepository handles media file data operations
 type MediaRepository struct {
-	mediaCollection   *mongo.Collection
-	logCollection     *mongo.Collection
-	storageCollection *mongo.Collection
-	configCollection  *mongo.Collection
+	mediaCollection      *mongo.Collection
+	logCollection        *mongo.Collection
+	storageCollection    *mongo.Collection
+	configCollection     *mongo.Collection
 	permissionCollection *mongo.Collection
-	folderCollection  *mongo.Collection
+	folderCollection     *mongo.Collection
 }
 
 // NewMediaRepository creates a new media repository
@@ -44,7 +44,7 @@ func (r *MediaRepository) CreateFile(ctx context.Context, file *model.MediaFile)
 	file.CreatedAt = time.Now()
 	file.UpdatedAt = time.Now()
 	file.ProcessingStatus = "completed"
-	
+
 	_, err := r.mediaCollection.InsertOne(ctx, file)
 	return err
 }
@@ -72,35 +72,35 @@ func (r *MediaRepository) FindFilesByFolder(ctx context.Context, tenantID primit
 		"folder":    folder,
 		"deletedAt": nil,
 	}
-	
+
 	total, err := r.mediaCollection.CountDocuments(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	opts := options.Find().
 		SetSort(bson.D{{Key: "createdAt", Value: -1}}).
 		SetSkip(int64((page - 1) * limit)).
 		SetLimit(int64(limit))
-	
+
 	cursor, err := r.mediaCollection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var files []*model.MediaFile
 	if err := cursor.All(ctx, &files); err != nil {
 		return nil, 0, err
 	}
-	
+
 	return files, total, nil
 }
 
 // UpdateFile updates a media file
 func (r *MediaRepository) UpdateFile(ctx context.Context, file *model.MediaFile) error {
 	file.UpdatedAt = time.Now()
-	
+
 	_, err := r.mediaCollection.UpdateOne(
 		ctx,
 		bson.M{"_id": file.ID},
@@ -124,7 +124,7 @@ func (r *MediaRepository) DeleteFile(ctx context.Context, id primitive.ObjectID)
 func (r *MediaRepository) LogUpload(ctx context.Context, log *model.UploadLog) error {
 	log.ID = primitive.NewObjectID()
 	log.CreatedAt = time.Now()
-	
+
 	_, err := r.logCollection.InsertOne(ctx, log)
 	return err
 }
@@ -132,24 +132,24 @@ func (r *MediaRepository) LogUpload(ctx context.Context, log *model.UploadLog) e
 // UpdateTenantStorage updates tenant storage usage
 func (r *MediaRepository) UpdateTenantStorage(ctx context.Context, tenantID primitive.ObjectID, sizeChange int64, fileType model.FileType, isDelete bool) error {
 	filter := bson.M{"tenantId": tenantID}
-	
+
 	increment := sizeChange
 	fileCountChange := 1
 	if isDelete {
 		increment = -sizeChange
 		fileCountChange = -1
 	}
-	
+
 	update := bson.M{
 		"$inc": bson.M{
-			"totalSize":  increment,
-			"fileCount":  fileCountChange,
+			"totalSize": increment,
+			"fileCount": fileCountChange,
 		},
 		"$set": bson.M{
 			"lastUpdated": time.Now(),
 		},
 	}
-	
+
 	// Also update type-specific size
 	switch fileType {
 	case model.FileTypeImage:
@@ -159,7 +159,7 @@ func (r *MediaRepository) UpdateTenantStorage(ctx context.Context, tenantID prim
 	case model.FileTypeDocument, model.FileTypePDF:
 		update["$inc"].(bson.M)["documentSize"] = increment
 	}
-	
+
 	opts := options.Update().SetUpsert(true)
 	_, err := r.storageCollection.UpdateOne(ctx, filter, update, opts)
 	return err
@@ -215,7 +215,7 @@ func (r *MediaRepository) CheckPermission(ctx context.Context, tenantID primitiv
 			{"role": role},
 		},
 	}
-	
+
 	var perm model.FilePermission
 	err := r.permissionCollection.FindOne(ctx, filter).Decode(&perm)
 	if err != nil {
@@ -225,7 +225,7 @@ func (r *MediaRepository) CheckPermission(ctx context.Context, tenantID primitiv
 		}
 		return false, err
 	}
-	
+
 	switch operation {
 	case "read":
 		return perm.CanRead, nil
@@ -243,7 +243,7 @@ func (r *MediaRepository) CreateFolder(ctx context.Context, folder *model.Folder
 	folder.ID = primitive.NewObjectID()
 	folder.CreatedAt = time.Now()
 	folder.UpdatedAt = time.Now()
-	
+
 	_, err := r.folderCollection.InsertOne(ctx, folder)
 	return err
 }
@@ -252,18 +252,18 @@ func (r *MediaRepository) CreateFolder(ctx context.Context, folder *model.Folder
 func (r *MediaRepository) FindFoldersByTenant(ctx context.Context, tenantID primitive.ObjectID) ([]*model.Folder, error) {
 	filter := bson.M{"tenantId": tenantID}
 	opts := options.Find().SetSort(bson.D{{Key: "path", Value: 1}})
-	
+
 	cursor, err := r.folderCollection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var folders []*model.Folder
 	if err := cursor.All(ctx, &folders); err != nil {
 		return nil, err
 	}
-	
+
 	return folders, nil
 }
 

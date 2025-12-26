@@ -34,7 +34,7 @@ func getIDFromPath(r *http.Request, param string) (primitive.ObjectID, error) {
 			break
 		}
 	}
-	
+
 	// If not found by param name, try last segment
 	if idStr == "" && len(parts) > 0 {
 		idStr = parts[len(parts)-1]

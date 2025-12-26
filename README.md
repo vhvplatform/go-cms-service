@@ -6,6 +6,42 @@ A comprehensive Content Management System built with microservices architecture 
 
 This repository contains production-ready CMS microservices with support for multiple content types, multi-tenancy, advanced permissions, caching, and comprehensive user engagement features.
 
+## Architecture
+
+The project follows modern Go architectural standards with:
+
+- **Shared Infrastructure (`pkg/`)**: Reusable packages for configuration, logging, database connections, HTTP server setup, error handling, and middleware
+- **Clean Architecture**: Clear separation between handlers, services, and repositories
+- **Microservices Pattern**: Independent, scalable services with focused responsibilities
+- **Containerization**: Docker-optimized builds with multi-stage compilation and security best practices
+- **CI/CD**: Automated testing, linting, and deployment pipelines
+- **Graceful Shutdown**: Proper signal handling and connection cleanup
+- **Structured Logging**: Centralized logging with log levels and service context
+
+### Project Structure
+
+```
+.
+├── pkg/                    # Shared infrastructure packages
+│   ├── config/            # Configuration management
+│   ├── database/          # Database utilities
+│   ├── errors/            # Error handling
+│   ├── httpserver/        # HTTP server setup
+│   ├── logger/            # Structured logging
+│   └── middleware/        # Common middleware
+├── services/              # Microservices
+│   ├── cms-admin-service/
+│   ├── cms-stats-service/
+│   ├── cms-frontend-service/
+│   ├── cms-media-service/
+│   └── cms-crawler-service/
+├── Makefile              # Build automation
+├── docker-compose.yml    # Service orchestration
+└── .github/workflows/    # CI/CD pipelines
+```
+
+See [pkg/README.md](pkg/README.md) for detailed documentation on shared infrastructure components.
+
 ## Microservices
 
 ### 1. CMS Admin Service (Port 8080)
@@ -196,13 +232,58 @@ SCHEDULER_INTERVAL=60s              # Scheduler interval
 
 ## Development
 
+### Build System
+
+The project uses a comprehensive Makefile for building and testing:
+
+```bash
+# Build all services
+make build
+
+# Build specific service
+make build-admin
+make build-stats
+make build-frontend
+make build-media
+make build-crawler
+
+# Run tests
+make test              # All tests
+make test-pkg          # Shared infrastructure tests
+make test-services     # Service-specific tests
+make test-coverage     # Generate coverage report
+
+# Linting and formatting
+make lint              # Run linters and format code
+make lint-check        # Check formatting without modifying
+make golangci-lint     # Run golangci-lint
+
+# Docker operations
+make docker-build      # Build all Docker images
+make docker-up         # Start all services
+make docker-down       # Stop all services
+make docker-logs       # View logs
+
+# Development tools
+make deps              # Download dependencies
+make tidy              # Tidy dependencies
+make install-tools     # Install development tools
+make clean             # Clean build artifacts
+
+# Run all verification checks
+make verify            # Lint + Test + golangci-lint
+make ci                # Full CI pipeline locally
+```
+
 ### Code Quality Standards
 
 - **No Code Duplication**: DRY principle
 - **Max Complexity**: 15 per function
-- **Error Handling**: No panics, proper error wrapping
+- **Error Handling**: No panics, proper error wrapping with `pkg/errors`
+- **Structured Logging**: Use `pkg/logger` for all logging
 - **Testing**: Unit + Integration tests
-- **SonarQube**: Compliant with quality gates
+- **Linting**: golangci-lint compliant
+- **Security**: Docker images run as non-root users
 
 ### Running Tests
 

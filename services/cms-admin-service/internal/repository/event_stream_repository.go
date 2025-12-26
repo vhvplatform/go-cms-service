@@ -29,7 +29,7 @@ func (r *EventStreamRepository) Create(ctx context.Context, eventStream *model.E
 	eventStream.ID = primitive.NewObjectID()
 	eventStream.CreatedAt = time.Now()
 	eventStream.UpdatedAt = time.Now()
-	
+
 	_, err := r.collection.InsertOne(ctx, eventStream)
 	return err
 }
@@ -63,10 +63,10 @@ func (r *EventStreamRepository) FindBySlug(ctx context.Context, slug string) (*m
 // Update updates an event stream
 func (r *EventStreamRepository) Update(ctx context.Context, eventStream *model.EventStream) error {
 	eventStream.UpdatedAt = time.Now()
-	
+
 	filter := bson.M{"_id": eventStream.ID}
 	update := bson.M{"$set": eventStream}
-	
+
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
 }

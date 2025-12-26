@@ -272,7 +272,7 @@ func (s *ArticleService) UpdateStatus(ctx context.Context, id primitive.ObjectID
 		if existing.CreatedBy != userID {
 			return fmt.Errorf("cannot change article status: you can only change status of your own articles")
 		}
-		
+
 		// Writers cannot publish articles, only submit for review
 		if status == model.ArticleStatusPublished {
 			return fmt.Errorf("cannot publish article: only editors and moderators can publish articles")
@@ -323,7 +323,7 @@ func (s *ArticleService) IncrementViewCount(ctx context.Context, id primitive.Ob
 	if s.viewQueue != nil {
 		return s.viewQueue.Enqueue(id)
 	}
-	
+
 	// Fallback to synchronous processing if queue not available
 	if err := s.repo.IncrementViewCount(ctx, id); err != nil {
 		return err
@@ -409,11 +409,11 @@ func (s *ArticleService) RejectArticle(ctx context.Context, id primitive.ObjectI
 	// Create rejection note in separate table
 	if s.rejectionNoteRepo != nil {
 		rejectionNote := &model.RejectionNote{
-			ArticleID: article.ID,
-			UserID:    userID,
-			UserName:  userName,
-			UserRole:  userRole,
-			Note:      note,
+			ArticleID:  article.ID,
+			UserID:     userID,
+			UserName:   userName,
+			UserRole:   userRole,
+			Note:       note,
 			IsResolved: false,
 		}
 		if err := s.rejectionNoteRepo.Create(ctx, rejectionNote); err != nil {
@@ -564,21 +564,21 @@ func (s *ArticleService) createVersion(ctx context.Context, article *model.Artic
 	}
 
 	version := &model.ArticleVersion{
-		ArticleID:   article.ID,
-		VersionNum:  latestVersion + 1,
-		Title:       article.Title,
-		Subtitle:    article.Subtitle,
-		Slug:        article.Slug,
-		ArticleType: article.ArticleType,
-		CategoryID:  article.CategoryID,
-		Summary:     article.Summary,
-		Content:     article.Content,
-		Author:      article.Author,
-		Tags:        article.Tags,
-		SEO:         article.SEO,
-		Status:      article.Status,
-		CreatedBy:   userID,
-		ChangeNote:  note,
+		ArticleID:    article.ID,
+		VersionNum:   latestVersion + 1,
+		Title:        article.Title,
+		Subtitle:     article.Subtitle,
+		Slug:         article.Slug,
+		ArticleType:  article.ArticleType,
+		CategoryID:   article.CategoryID,
+		Summary:      article.Summary,
+		Content:      article.Content,
+		Author:       article.Author,
+		Tags:         article.Tags,
+		SEO:          article.SEO,
+		Status:       article.Status,
+		CreatedBy:    userID,
+		ChangeNote:   note,
 		FullSnapshot: article, // Store full article for complete restoration
 	}
 
@@ -592,12 +592,12 @@ func (s *ArticleService) AddRejectionNote(ctx context.Context, articleID primiti
 	}
 
 	rejectionNote := &model.RejectionNote{
-		ArticleID: articleID,
-		UserID:    userID,
-		UserName:  userName,
-		UserRole:  userRole,
-		Note:      note,
-		ParentID:  parentID,
+		ArticleID:  articleID,
+		UserID:     userID,
+		UserName:   userName,
+		UserRole:   userRole,
+		Note:       note,
+		ParentID:   parentID,
 		IsResolved: false,
 	}
 
@@ -650,12 +650,12 @@ func (s *ArticleService) GetRelatedArticles(ctx context.Context, articleID primi
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// If manually assigned related articles exist, return them
 	if len(article.RelatedArticles) > 0 {
 		return s.repo.FindRelatedArticles(ctx, article.RelatedArticles)
 	}
-	
+
 	// Otherwise, find similar articles by tags
 	return s.repo.FindSimilarArticlesByTags(ctx, articleID, article.Tags, 5)
 }
@@ -666,7 +666,7 @@ func (s *ArticleService) UpdateRelatedArticles(ctx context.Context, articleID pr
 	if userRole != model.RoleEditor && userRole != model.RoleModerator {
 		return fmt.Errorf("insufficient permissions: only editors and moderators can update related articles")
 	}
-	
+
 	// Validate that related articles exist
 	if len(relatedIDs) > 0 {
 		_, err := s.repo.FindRelatedArticles(ctx, relatedIDs)
@@ -674,6 +674,6 @@ func (s *ArticleService) UpdateRelatedArticles(ctx context.Context, articleID pr
 			return fmt.Errorf("failed to validate related articles: %w", err)
 		}
 	}
-	
+
 	return s.repo.UpdateRelatedArticles(ctx, articleID, relatedIDs)
 }

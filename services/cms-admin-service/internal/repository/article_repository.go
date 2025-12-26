@@ -32,7 +32,7 @@ func (r *ArticleRepository) Create(ctx context.Context, article *model.Article) 
 	article.ID = primitive.NewObjectID()
 	article.CreatedAt = time.Now()
 	article.UpdatedAt = time.Now()
-	
+
 	_, err := r.collection.InsertOne(ctx, article)
 	return err
 }
@@ -66,10 +66,10 @@ func (r *ArticleRepository) FindBySlug(ctx context.Context, slug string) (*model
 // Update updates an article
 func (r *ArticleRepository) Update(ctx context.Context, article *model.Article) error {
 	article.UpdatedAt = time.Now()
-	
+
 	filter := bson.M{"_id": article.ID}
 	update := bson.M{"$set": article}
-	
+
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
 }
@@ -83,7 +83,7 @@ func (r *ArticleRepository) Delete(ctx context.Context, id primitive.ObjectID) e
 			"updatedAt": time.Now(),
 		},
 	}
-	
+
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
 }
@@ -145,7 +145,7 @@ func (r *ArticleRepository) UpdateStatus(ctx context.Context, id primitive.Objec
 			"updatedAt":   time.Now(),
 		},
 	}
-	
+
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
 }
@@ -159,7 +159,7 @@ func (r *ArticleRepository) UpdateOrdering(ctx context.Context, id primitive.Obj
 			"updatedAt": time.Now(),
 		},
 	}
-	
+
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
 }
@@ -171,7 +171,7 @@ func (r *ArticleRepository) IncrementViewCount(ctx context.Context, id primitive
 		"$inc": bson.M{"viewCount": 1},
 		"$set": bson.M{"updatedAt": time.Now()},
 	}
-	
+
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
 }
@@ -225,7 +225,7 @@ func (r *ArticleRepository) CalculateCharCount(content string) int {
 	// Remove HTML tags and count characters
 	cleaned := strings.ReplaceAll(content, "<", " <")
 	cleaned = strings.ReplaceAll(cleaned, ">", "> ")
-	
+
 	// Simple character count (can be enhanced)
 	return len(strings.TrimSpace(cleaned))
 }
@@ -291,30 +291,30 @@ func (r *ArticleRepository) FindByTag(ctx context.Context, tag string, page, lim
 		"tags":   tag,
 		"status": model.ArticleStatusPublished,
 	}
-	
+
 	// Count total
 	total, err := r.collection.CountDocuments(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	// Find with pagination
 	opts := options.Find().
 		SetSort(bson.D{{Key: "publishAt", Value: -1}}).
 		SetSkip(int64((page - 1) * limit)).
 		SetLimit(int64(limit))
-	
+
 	cursor, err := r.collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var articles []*model.Article
 	if err := cursor.All(ctx, &articles); err != nil {
 		return nil, 0, err
 	}
-	
+
 	return articles, total, nil
 }
 
@@ -324,30 +324,30 @@ func (r *ArticleRepository) FindByAuthor(ctx context.Context, authorID string, p
 		"author.id": authorID,
 		"status":    model.ArticleStatusPublished,
 	}
-	
+
 	// Count total
 	total, err := r.collection.CountDocuments(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	// Find with pagination
 	opts := options.Find().
 		SetSort(bson.D{{Key: "publishAt", Value: -1}}).
 		SetSkip(int64((page - 1) * limit)).
 		SetLimit(int64(limit))
-	
+
 	cursor, err := r.collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var articles []*model.Article
 	if err := cursor.All(ctx, &articles); err != nil {
 		return nil, 0, err
 	}
-	
+
 	return articles, total, nil
 }
 
@@ -356,23 +356,23 @@ func (r *ArticleRepository) FindRelatedArticles(ctx context.Context, articleIDs 
 	if len(articleIDs) == 0 {
 		return []*model.Article{}, nil
 	}
-	
+
 	filter := bson.M{
 		"_id":    bson.M{"$in": articleIDs},
 		"status": model.ArticleStatusPublished,
 	}
-	
+
 	cursor, err := r.collection.Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var articles []*model.Article
 	if err := cursor.All(ctx, &articles); err != nil {
 		return nil, err
 	}
-	
+
 	return articles, nil
 }
 
@@ -384,7 +384,7 @@ func (r *ArticleRepository) UpdateRelatedArticles(ctx context.Context, id primit
 			"updatedAt":       time.Now(),
 		},
 	}
-	
+
 	_, err := r.collection.UpdateOne(ctx, bson.M{"_id": id}, update)
 	return err
 }
@@ -394,27 +394,27 @@ func (r *ArticleRepository) FindSimilarArticlesByTags(ctx context.Context, artic
 	if len(tags) == 0 {
 		return []*model.Article{}, nil
 	}
-	
+
 	filter := bson.M{
 		"_id":    bson.M{"$ne": articleID},
 		"tags":   bson.M{"$in": tags},
 		"status": model.ArticleStatusPublished,
 	}
-	
+
 	opts := options.Find().
 		SetSort(bson.D{{Key: "publishAt", Value: -1}}).
 		SetLimit(int64(limit))
-	
+
 	cursor, err := r.collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var articles []*model.Article
 	if err := cursor.All(ctx, &articles); err != nil {
 		return nil, err
 	}
-	
+
 	return articles, nil
 }

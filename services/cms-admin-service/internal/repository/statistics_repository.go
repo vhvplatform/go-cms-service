@@ -241,11 +241,11 @@ func (r *StatisticsRepository) GetTopViewedArticles(ctx context.Context, startDa
 		var result struct {
 			ViewCount int64 `bson:"viewCount"`
 			Article   struct {
-				ID          primitive.ObjectID    `bson:"_id"`
-				Title       string                `bson:"title"`
-				Slug        string                `bson:"slug"`
-				ArticleType model.ArticleType     `bson:"articleType"`
-				CategoryID  primitive.ObjectID    `bson:"categoryId"`
+				ID          primitive.ObjectID `bson:"_id"`
+				Title       string             `bson:"title"`
+				Slug        string             `bson:"slug"`
+				ArticleType model.ArticleType  `bson:"articleType"`
+				CategoryID  primitive.ObjectID `bson:"categoryId"`
 			} `bson:"article"`
 		}
 		if err := cursor.Decode(&result); err != nil {

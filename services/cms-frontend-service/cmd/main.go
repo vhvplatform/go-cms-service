@@ -12,8 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/vhvplatform/go-cms-service/services/cms-frontend-service/internal/client"
 	"github.com/redis/go-redis/v9"
+	"github.com/vhvplatform/go-cms-service/services/cms-frontend-service/internal/client"
 )
 
 func main() {

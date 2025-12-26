@@ -24,7 +24,7 @@ func NewCrawlerArticleRepository(db *mongo.Database) *CrawlerArticleRepository {
 func (r *CrawlerArticleRepository) Create(ctx context.Context, article *model.CrawlerArticle) error {
 	article.CrawledAt = time.Now()
 	article.UpdatedAt = time.Now()
-	
+
 	result, err := r.collection.InsertOne(ctx, article)
 	if err != nil {
 		return err
@@ -47,18 +47,18 @@ func (r *CrawlerArticleRepository) GetByTenant(ctx context.Context, tenantID str
 	if status != "" {
 		filter["status"] = status
 	}
-	
+
 	opts := options.Find().
 		SetSort(bson.M{"crawled_at": -1}).
 		SetLimit(int64(limit)).
 		SetSkip(int64(skip))
-	
+
 	cursor, err := r.collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var articles []*model.CrawlerArticle
 	if err := cursor.All(ctx, &articles); err != nil {
 		return nil, err
@@ -73,12 +73,12 @@ func (r *CrawlerArticleRepository) UpdateStatus(ctx context.Context, id primitiv
 			"updated_at": time.Now(),
 		},
 	}
-	
+
 	if status == "approved" {
 		update["$set"].(bson.M)["approved_by"] = userID
 		update["$set"].(bson.M)["approved_at"] = time.Now()
 	}
-	
+
 	_, err := r.collection.UpdateOne(ctx, bson.M{"_id": id}, update)
 	return err
 }
@@ -90,7 +90,7 @@ func (r *CrawlerArticleRepository) FindDuplicates(ctx context.Context, contentHa
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var articles []*model.CrawlerArticle
 	if err := cursor.All(ctx, &articles); err != nil {
 		return nil, err
@@ -104,7 +104,7 @@ func (r *CrawlerArticleRepository) DeleteOldArticles(ctx context.Context, tenant
 		"crawled_at": bson.M{"$lt": beforeDate},
 		"status":     bson.M{"$in": []string{"pending", "rejected"}},
 	}
-	
+
 	result, err := r.collection.DeleteMany(ctx, filter)
 	if err != nil {
 		return 0, err
@@ -116,27 +116,27 @@ func (r *CrawlerArticleRepository) GetStats(ctx context.Context, tenantID string
 	pipeline := []bson.M{
 		{"$match": bson.M{"tenant_id": tenantID}},
 		{"$group": bson.M{
-			"_id": "$status",
+			"_id":   "$status",
 			"count": bson.M{"$sum": 1},
 		}},
 	}
-	
+
 	cursor, err := r.collection.Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	stats := &model.CrawlerStats{TenantID: tenantID}
 	var results []bson.M
 	if err := cursor.All(ctx, &results); err != nil {
 		return nil, err
 	}
-	
+
 	for _, result := range results {
 		status := result["_id"].(string)
 		count := int(result["count"].(int32))
-		
+
 		switch status {
 		case "pending":
 			stats.PendingReview = count
@@ -149,7 +149,7 @@ func (r *CrawlerArticleRepository) GetStats(ctx context.Context, tenantID string
 		}
 		stats.TotalCrawled += count
 	}
-	
+
 	return stats, nil
 }
 
@@ -166,7 +166,7 @@ func NewCrawlerSourceRepository(db *mongo.Database) *CrawlerSourceRepository {
 func (r *CrawlerSourceRepository) Create(ctx context.Context, source *model.CrawlerSource) error {
 	source.CreatedAt = time.Now()
 	source.UpdatedAt = time.Now()
-	
+
 	result, err := r.collection.InsertOne(ctx, source)
 	if err != nil {
 		return err
@@ -189,13 +189,13 @@ func (r *CrawlerSourceRepository) GetByTenant(ctx context.Context, tenantID stri
 	if activeOnly {
 		filter["is_active"] = true
 	}
-	
+
 	cursor, err := r.collection.Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var sources []*model.CrawlerSource
 	if err := cursor.All(ctx, &sources); err != nil {
 		return nil, err
@@ -215,11 +215,11 @@ func (r *CrawlerSourceRepository) UpdateLastCrawled(ctx context.Context, id prim
 		"$set": bson.M{"last_crawled_at": time.Now()},
 		"$inc": bson.M{"total_crawled": 1},
 	}
-	
+
 	if !success {
 		update["$inc"].(bson.M)["total_errors"] = 1
 	}
-	
+
 	_, err := r.collection.UpdateOne(ctx, bson.M{"_id": id}, update)
 	return err
 }
@@ -237,7 +237,7 @@ func NewCrawlerCampaignRepository(db *mongo.Database) *CrawlerCampaignRepository
 func (r *CrawlerCampaignRepository) Create(ctx context.Context, campaign *model.CrawlerCampaign) error {
 	campaign.CreatedAt = time.Now()
 	campaign.UpdatedAt = time.Now()
-	
+
 	result, err := r.collection.InsertOne(ctx, campaign)
 	if err != nil {
 		return err
@@ -260,13 +260,13 @@ func (r *CrawlerCampaignRepository) GetActiveCampaigns(ctx context.Context, tena
 		"tenant_id": tenantID,
 		"is_active": true,
 	}
-	
+
 	cursor, err := r.collection.Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var campaigns []*model.CrawlerCampaign
 	if err := cursor.All(ctx, &campaigns); err != nil {
 		return nil, err
