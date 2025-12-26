@@ -25,7 +25,11 @@ build: ## Build all services
 	@echo "Building all services..."
 	@for service in $(SERVICES); do \
 		echo "Building $$service..."; \
-		CGO_ENABLED=0 $(GO) build $(LDFLAGS) -o bin/$$service ./services/$$service/cmd || exit 1; \
+		if [ -f services/$$service/go.mod ]; then \
+			cd services/$$service && CGO_ENABLED=0 $(GO) build $(LDFLAGS) -o ../../bin/$$service ./cmd && cd ../..; \
+		else \
+			CGO_ENABLED=0 $(GO) build $(LDFLAGS) -o bin/$$service ./services/$$service/cmd; \
+		fi || exit 1; \
 	done
 	@echo "Build complete"
 
@@ -35,11 +39,11 @@ build-admin: ## Build CMS Admin Service
 
 build-stats: ## Build CMS Stats Service
 	@echo "Building cms-stats-service..."
-	@CGO_ENABLED=0 $(GO) build $(LDFLAGS) -o bin/cms-stats-service ./services/cms-stats-service/cmd
+	@cd services/cms-stats-service && CGO_ENABLED=0 $(GO) build $(LDFLAGS) -o ../../bin/cms-stats-service ./cmd
 
 build-frontend: ## Build CMS Frontend Service
 	@echo "Building cms-frontend-service..."
-	@CGO_ENABLED=0 $(GO) build $(LDFLAGS) -o bin/cms-frontend-service ./services/cms-frontend-service/cmd
+	@cd services/cms-frontend-service && CGO_ENABLED=0 $(GO) build $(LDFLAGS) -o ../../bin/cms-frontend-service ./cmd
 
 build-media: ## Build CMS Media Service
 	@echo "Building cms-media-service..."
@@ -47,7 +51,7 @@ build-media: ## Build CMS Media Service
 
 build-crawler: ## Build CMS Crawler Service
 	@echo "Building cms-crawler-service..."
-	@CGO_ENABLED=0 $(GO) build $(LDFLAGS) -o bin/cms-crawler-service ./services/cms-crawler-service/cmd
+	@cd services/cms-crawler-service && CGO_ENABLED=0 $(GO) build $(LDFLAGS) -o ../../bin/cms-crawler-service ./cmd
 
 run-admin: ## Run CMS Admin Service locally
 	@echo "Running cms-admin-service..."
