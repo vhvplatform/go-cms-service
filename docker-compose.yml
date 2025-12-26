@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:5.0
+    container_name: cms-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: cms
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - cms-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongo localhost:27017/cms --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:6-alpine
+    container_name: cms-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - cms-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Article Service
+  article-service:
+    build:
+      context: .
+      dockerfile: services/article-service/Dockerfile
+    container_name: cms-article-service
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVER_PORT=8080
+      - MONGODB_URI=mongodb://mongodb:27017
+      - MONGODB_DATABASE=cms
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=
+      - REDIS_DB=0
+      - RUN_MIGRATIONS=true
+      - CACHE_TTL=300
+      - QUEUE_SIZE=10000
+      - QUEUE_BATCH_SIZE=100
+      - QUEUE_FLUSH_INTERVAL=5s
+      - SCHEDULER_INTERVAL=60s
+      - LOG_LEVEL=info
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cms-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  cms-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  redis_data:
+    driver: local
