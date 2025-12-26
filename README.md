@@ -1,10 +1,18 @@
 # Go CMS Service
 
-A comprehensive Content Management System microservice built with Go and MongoDB.
+A comprehensive Content Management System built with microservices architecture using Go and MongoDB.
 
 ## Overview
 
-This repository contains a production-ready article management service with support for multiple content types, multi-tenancy, advanced permissions, caching, and comprehensive statistics.
+This repository contains production-ready CMS microservices with support for multiple content types, multi-tenancy, advanced permissions, caching, and comprehensive user engagement features.
+
+## Microservices
+
+### 1. CMS Service (Port 8080)
+Main content management service handling articles, categories, permissions, and workflows.
+
+### 2. CMS Stats Service (Port 8081)
+Dedicated service for comments and statistics, isolated for better scalability and performance.
 
 ## Features
 
@@ -36,24 +44,29 @@ cd go-cms-service
 # Start all services
 docker-compose up -d
 
-# Check service health
-curl http://localhost:8080/health
+# Check services health
+curl http://localhost:8080/health  # CMS Service
+curl http://localhost:8081/health  # CMS Stats Service
 ```
 
 ### Local Development
 
 ```bash
-# Install dependencies
+# Start CMS Service
 cd services/cms-service
 go mod download
-
-# Set environment variables
 export MONGODB_URI=mongodb://localhost:27017
 export MONGODB_DATABASE=cms
 export REDIS_ADDR=localhost:6379
 export SERVER_PORT=8080
+go run cmd/main.go
 
-# Run the service
+# Start CMS Stats Service (in another terminal)
+cd services/cms-stats-service
+go mod download
+export MONGODB_URI=mongodb://localhost:27017
+export MONGODB_DATABASE=cms_comments
+export SERVER_PORT=8081
 go run cmd/main.go
 ```
 

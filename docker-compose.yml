@@ -62,6 +62,7 @@ services:
       - QUEUE_FLUSH_INTERVAL=5s
       - SCHEDULER_INTERVAL=60s
       - LOG_LEVEL=info
+      - BASE_URL=http://localhost:8080
     depends_on:
       mongodb:
         condition: service_healthy
@@ -71,6 +72,32 @@ services:
       - cms-network
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # CMS Stats Service (Comments & Statistics)
+  cms-stats-service:
+    build:
+      context: .
+      dockerfile: services/cms-stats-service/Dockerfile
+    container_name: cms-stats-service
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - SERVER_PORT=8081
+      - MONGODB_URI=mongodb://mongodb:27017
+      - MONGODB_DATABASE=cms_comments
+      - LOG_LEVEL=info
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - cms-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/health"]
       interval: 30s
       timeout: 10s
       retries: 3

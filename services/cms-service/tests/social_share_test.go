@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/vhvplatform/go-cms-service/services/cms-service/internal/model"
@@ -94,14 +95,5 @@ func TestSocialMediaSharer_GenerateLinkedInURL(t *testing.T) {
 }
 
 func contains(str, substr string) bool {
-	return len(str) >= len(substr) && (str == substr || len(str) > len(substr) && findSubstring(str, substr))
-}
-
-func findSubstring(str, substr string) bool {
-	for i := 0; i <= len(str)-len(substr); i++ {
-		if str[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
+	return strings.Contains(str, substr)
 }

@@ -98,6 +98,16 @@ type AccessControl struct {
 	IsPremium        bool     `json:"isPremium" bson:"isPremium"`                 // Premium content flag
 }
 
+// CommentConfig represents comment configuration for an article
+type CommentConfig struct {
+	Enabled          bool   `json:"enabled" bson:"enabled"`                   // Comments enabled
+	RequireApproval  bool   `json:"requireApproval" bson:"requireApproval"`   // Require moderation
+	AllowAnonymous   bool   `json:"allowAnonymous" bson:"allowAnonymous"`     // Allow anonymous comments
+	AllowNested      bool   `json:"allowNested" bson:"allowNested"`           // Allow nested replies
+	MaxNestingLevel  int    `json:"maxNestingLevel" bson:"maxNestingLevel"`   // Max nesting level (default 3)
+	AutoCloseAfter   int    `json:"autoCloseAfter" bson:"autoCloseAfter"`     // Auto-close after N days (0 = never)
+}
+
 // Article represents the main article document
 type Article struct {
 	ID            primitive.ObjectID     `json:"id" bson:"_id,omitempty"`
@@ -128,7 +138,8 @@ type Article struct {
 	CreatedBy     string                 `json:"createdBy" bson:"createdBy"`
 	ExpiredAt     *time.Time             `json:"expiredAt,omitempty" bson:"expiredAt,omitempty"`
 	Status        ArticleStatus          `json:"status" bson:"status"`
-	IsCommentable bool                   `json:"isCommentable" bson:"isCommentable"`
+	IsCommentable bool                   `json:"isCommentable" bson:"isCommentable"` // Can users comment on this article
+	CommentConfig CommentConfig          `json:"commentConfig" bson:"commentConfig"` // Comment configuration
 	CharCount     int                    `json:"charCount" bson:"charCount"`
 	ImageCount    int                    `json:"imageCount" bson:"imageCount"`
 	ViewCount     int                    `json:"viewCount" bson:"viewCount"`
