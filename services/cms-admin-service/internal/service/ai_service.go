@@ -209,10 +209,16 @@ func (s *AIService) DetectViolation(ctx context.Context, tenantID, userID, conte
 // Provider-specific implementations (simplified - would need actual API integration)
 
 func (s *AIService) spellCheckOpenAI(ctx context.Context, config *model.AIConfiguration, text string) (*model.SpellCheckResult, error) {
-	// This is a simplified implementation. In production, integrate with OpenAI API
-	prompt := fmt.Sprintf("Check the following text for spelling and grammar errors. Return a JSON array of corrections: %s", text)
+	// Sanitize input to prevent prompt injection
+	sanitizedText := strings.ReplaceAll(text, "\n", " ")
+	sanitizedText = strings.ReplaceAll(sanitizedText, "\"", "'")
+	if len(sanitizedText) > 5000 {
+		sanitizedText = sanitizedText[:5000] // Limit length
+	}
 	
-	// Mock response for now
+	prompt := "Check the following text for spelling and grammar errors. Return a JSON array of corrections."
+	
+	// Mock response for now - in production, integrate with actual OpenAI API
 	return &model.SpellCheckResult{
 		Original:    text,
 		Corrections: []model.SpellCorrection{},

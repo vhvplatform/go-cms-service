@@ -65,9 +65,13 @@ func (s *CrawlerService) RunCampaign(ctx context.Context, campaignID primitive.O
 		// Crawl the source
 		if err := s.CrawlSource(ctx, source, campaign); err != nil {
 			log.Printf("Failed to crawl source %s: %v", source.Name, err)
-			s.sourceRepo.UpdateLastCrawled(ctx, source.ID, false)
+			if updateErr := s.sourceRepo.UpdateLastCrawled(ctx, source.ID, false); updateErr != nil {
+				log.Printf("Failed to update source status: %v", updateErr)
+			}
 		} else {
-			s.sourceRepo.UpdateLastCrawled(ctx, source.ID, true)
+			if updateErr := s.sourceRepo.UpdateLastCrawled(ctx, source.ID, true); updateErr != nil {
+				log.Printf("Failed to update source status: %v", updateErr)
+			}
 		}
 	}
 	
@@ -107,7 +111,10 @@ func (s *CrawlerService) CrawlSource(ctx context.Context, source *model.CrawlerS
 		
 		// Check for duplicates
 		duplicates, err := s.articleRepo.FindDuplicates(ctx, article.ContentHash)
-		if err == nil && len(duplicates) > 0 {
+		if err != nil {
+			log.Printf("Error checking duplicates for article: %v", err)
+			// Continue with save - better to have potential duplicate than lose content
+		} else if len(duplicates) > 0 {
 			log.Printf("Duplicate article found: %s", article.Title)
 			continue
 		}

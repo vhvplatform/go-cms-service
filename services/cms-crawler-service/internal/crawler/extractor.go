@@ -2,7 +2,7 @@ package crawler
 
 import (
 	"context"
-	"crypto/md5"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"net/http"
@@ -164,19 +164,24 @@ func (e *ContentExtractor) resolveURL(baseURL, relativeURL string) string {
 	return base.ResolveReference(rel).String()
 }
 
-// generateContentHash generates MD5 hash of content for duplicate detection
+// generateContentHash generates SHA-256 hash of content for duplicate detection
 func (e *ContentExtractor) generateContentHash(content string) string {
-	hash := md5.New()
+	hash := sha256.New()
 	io.WriteString(hash, content)
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
 // ExtractFromRSS extracts articles from RSS feed
 func (e *ContentExtractor) ExtractFromRSS(ctx context.Context, feedURL string, source *model.CrawlerSource) ([]*model.CrawlerArticle, error) {
-	// Simplified RSS parsing - would use proper RSS library in production
+	// Create request with custom headers
 	req, err := http.NewRequestWithContext(ctx, "GET", feedURL, nil)
 	if err != nil {
 		return nil, err
+	}
+	
+	// Set user agent
+	if len(source.UserAgents) > 0 {
+		req.Header.Set("User-Agent", source.UserAgents[0])
 	}
 	
 	resp, err := e.httpClient.Do(req)
@@ -185,9 +190,60 @@ func (e *ContentExtractor) ExtractFromRSS(ctx context.Context, feedURL string, s
 	}
 	defer resp.Body.Close()
 	
-	// Parse RSS and extract articles
-	// This is a placeholder - would use github.com/mmcdole/gofeed or similar
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch RSS: status %d", resp.StatusCode)
+	}
+	
+	// Parse XML/RSS feed using goquery for basic extraction
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	
 	var articles []*model.CrawlerArticle
+	
+	// Extract items from RSS feed
+	doc.Find("item").Each(func(i int, s *goquery.Selection) {
+		article := &model.CrawlerArticle{
+			SourceID:  source.ID,
+			TenantID:  source.TenantID,
+			Status:    "pending",
+		}
+		
+		// Extract title
+		article.Title = strings.TrimSpace(s.Find("title").Text())
+		
+		// Extract description/content
+		content := s.Find("description").Text()
+		if content == "" {
+			content = s.Find("content\\:encoded").Text()
+		}
+		article.Content = strings.TrimSpace(content)
+		
+		// Extract link as source URL
+		article.SourceURL = strings.TrimSpace(s.Find("link").Text())
+		
+		// Extract author
+		article.Author = strings.TrimSpace(s.Find("author").Text())
+		if article.Author == "" {
+			article.Author = strings.TrimSpace(s.Find("dc\\:creator").Text())
+		}
+		
+		// Extract categories as tags
+		s.Find("category").Each(func(j int, cat *goquery.Selection) {
+			tag := strings.TrimSpace(cat.Text())
+			if tag != "" {
+				article.Tags = append(article.Tags, tag)
+			}
+		})
+		
+		// Generate content hash
+		article.ContentHash = e.generateContentHash(article.Title + article.Content)
+		
+		if article.Title != "" && article.Content != "" {
+			articles = append(articles, article)
+		}
+	})
 	
 	return articles, nil
 }
