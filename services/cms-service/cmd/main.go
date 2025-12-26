@@ -14,6 +14,7 @@ import (
 	"github.com/vhvplatform/go-cms-service/services/cms-service/internal/migrations"
 	"github.com/vhvplatform/go-cms-service/services/cms-service/internal/repository"
 	"github.com/vhvplatform/go-cms-service/services/cms-service/internal/service"
+	"github.com/vhvplatform/go-cms-service/services/cms-service/internal/util"
 	"github.com/vhvplatform/go-cms-service/services/cms-service/internal/worker"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -25,12 +26,14 @@ func main() {
 	dbName := getEnv("MONGODB_DATABASE", "cms")
 	serverPort := getEnv("SERVER_PORT", "8080")
 	baseURL := getEnv("BASE_URL", "http://localhost:"+serverPort)
+	uploadDir := getEnv("UPLOAD_DIR", "./uploads")
 	runMigrations := getEnv("RUN_MIGRATIONS", "true") == "true"
 
 	log.Println("Starting CMS Service...")
 	log.Printf("MongoDB URI: %s", mongoURI)
 	log.Printf("Database: %s", dbName)
 	log.Printf("Server Port: %s", serverPort)
+	log.Printf("Upload Directory: %s", uploadDir)
 
 	// Connect to MongoDB
 	ctx := context.Background()
@@ -66,13 +69,16 @@ func main() {
 	rejectionNoteRepo := repository.NewRejectionNoteRepository(db)
 	commentRepo := repository.NewCommentRepository(db)
 
+	// Initialize utilities
+	imageDownloader := util.NewImageDownloader(uploadDir, baseURL)
+
 	// Initialize view queue
 	viewQueue := worker.NewViewQueue(articleRepo, viewStatsRepo, 10000, 100, 5*time.Second)
 	viewQueue.Start(ctx)
 	defer viewQueue.Stop()
 
 	// Initialize services
-	articleService := service.NewArticleService(articleRepo, permissionRepo, viewStatsRepo, viewQueue, actionLogRepo, versionRepo, rejectionNoteRepo)
+	articleService := service.NewArticleService(articleRepo, permissionRepo, viewStatsRepo, viewQueue, actionLogRepo, versionRepo, rejectionNoteRepo, imageDownloader)
 	categoryService := service.NewCategoryService(categoryRepo)
 	commentService := service.NewCommentService(commentRepo)
 	rssService := service.NewRSSService(articleRepo, baseURL)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/vhvplatform/go-cms-service/services/cms-service/internal/model"
 	"github.com/vhvplatform/go-cms-service/services/cms-service/internal/repository"
+	"github.com/vhvplatform/go-cms-service/services/cms-service/internal/util"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -26,6 +27,7 @@ type ArticleService struct {
 	actionLogRepo     *repository.ActionLogRepository
 	versionRepo       *repository.ArticleVersionRepository
 	rejectionNoteRepo *repository.RejectionNoteRepository
+	imageDownloader   *util.ImageDownloader
 }
 
 // NewArticleService creates a new article service
@@ -37,6 +39,7 @@ func NewArticleService(
 	actionLogRepo *repository.ActionLogRepository,
 	versionRepo *repository.ArticleVersionRepository,
 	rejectionNoteRepo *repository.RejectionNoteRepository,
+	imageDownloader *util.ImageDownloader,
 ) *ArticleService {
 	return &ArticleService{
 		repo:              repo,
@@ -46,6 +49,7 @@ func NewArticleService(
 		actionLogRepo:     actionLogRepo,
 		versionRepo:       versionRepo,
 		rejectionNoteRepo: rejectionNoteRepo,
+		imageDownloader:   imageDownloader,
 	}
 }
 
@@ -54,6 +58,14 @@ func (s *ArticleService) Create(ctx context.Context, article *model.Article, use
 	// Generate slug if not provided
 	if article.Slug == "" {
 		article.Slug = s.generateSlug(article.Title)
+	}
+
+	// Process and download external images if image downloader is available
+	if s.imageDownloader != nil && article.Content != "" {
+		processedContent, _, err := s.imageDownloader.ProcessHTMLImages(article.Content)
+		if err == nil {
+			article.Content = processedContent
+		}
 	}
 
 	// Calculate character and image counts
@@ -120,6 +132,14 @@ func (s *ArticleService) Update(ctx context.Context, article *model.Article, use
 	if existing.CreatedBy == userID && userRole == model.RoleWriter {
 		if existing.Status == model.ArticleStatusPublished || existing.Status == model.ArticleStatusArchived {
 			return fmt.Errorf("cannot edit article: article has been reviewed, contact an editor or moderator for changes")
+		}
+	}
+
+	// Process and download external images if image downloader is available
+	if s.imageDownloader != nil && article.Content != "" {
+		processedContent, _, err := s.imageDownloader.ProcessHTMLImages(article.Content)
+		if err == nil {
+			article.Content = processedContent
 		}
 	}
 
