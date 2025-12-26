@@ -74,8 +74,9 @@ func (e *ContentExtractor) Extract(ctx context.Context, sourceURL string, config
 	if config.TitleSelector != "" {
 		article.Title = strings.TrimSpace(doc.Find(config.TitleSelector).First().Text())
 	} else if config.TitleXPath != "" {
-		// XPath extraction would require additional library
-		article.Title = "Title extracted via XPath"
+		// XPath extraction requires additional library like htmlquery or xmlpath
+		// For now, fallback to basic extraction
+		article.Title = strings.TrimSpace(doc.Find("title").First().Text())
 	}
 	
 	// Extract content
@@ -216,7 +217,8 @@ func (e *ContentExtractor) ExtractFromRSS(ctx context.Context, feedURL string, s
 		// Extract description/content
 		content := s.Find("description").Text()
 		if content == "" {
-			content = s.Find("content\\:encoded").Text()
+			// Try content:encoded without namespace (common in RSS)
+			content = s.Find("encoded").Text()
 		}
 		article.Content = strings.TrimSpace(content)
 		

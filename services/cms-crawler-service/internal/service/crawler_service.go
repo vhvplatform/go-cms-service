@@ -217,13 +217,15 @@ func (s *CrawlerService) ConvertToArticle(ctx context.Context, crawlerArticleID 
 		return primitive.NilObjectID, fmt.Errorf("article must be approved before conversion")
 	}
 	
-	// Here we would call the main CMS service to create the article
-	// For now, just update the status
+	// TODO: Integrate with CMS admin service to create the actual article
+	// This would involve calling the CMS service API to create the article
+	// and storing the returned article ID in the ConvertedToID field
+	
+	// For now, just update the status to mark as converted
 	if err := s.articleRepo.UpdateStatus(ctx, crawlerArticleID, "converted", userID); err != nil {
 		return primitive.NilObjectID, err
 	}
 	
-	// Return a placeholder article ID
-	// In production, this would be the actual created article ID
-	return primitive.NewObjectID(), nil
+	// Return error indicating this feature needs CMS service integration
+	return primitive.NilObjectID, fmt.Errorf("article conversion requires CMS service integration - article marked as converted")
 }

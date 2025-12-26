@@ -95,6 +95,7 @@ func (s *SensitiveKeywordService) ScanContent(ctx context.Context, tenantID, con
 		} else {
 			// Simple keyword matching
 			keywordLower := strings.ToLower(kw.Keyword)
+			keywordLen := len(keywordLower)
 			index := 0
 			for {
 				pos := strings.Index(contentLower[index:], keywordLower)
@@ -102,9 +103,14 @@ func (s *SensitiveKeywordService) ScanContent(ctx context.Context, tenantID, con
 					break
 				}
 				actualPos := index + pos
-				matches = append(matches, content[actualPos:actualPos+len(kw.Keyword)])
+				// Ensure we don't go out of bounds
+				endPos := actualPos + keywordLen
+				if endPos > len(content) {
+					endPos = len(content)
+				}
+				matches = append(matches, content[actualPos:endPos])
 				positions = append(positions, actualPos)
-				index = actualPos + len(kw.Keyword)
+				index = actualPos + keywordLen
 			}
 		}
 		
