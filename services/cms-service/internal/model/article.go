@@ -135,10 +135,7 @@ type Article struct {
 	ReadingStats  *ReadingStats          `json:"readingStats,omitempty" bson:"readingStats,omitempty"`
 	AccessControl AccessControl          `json:"accessControl" bson:"accessControl"` // Access control settings
 	
-	// Workflow management
-	RejectionNote   string    `json:"rejectionNote,omitempty" bson:"rejectionNote,omitempty"`
-	RejectedBy      string    `json:"rejectedBy,omitempty" bson:"rejectedBy,omitempty"`
-	RejectedAt      *time.Time `json:"rejectedAt,omitempty" bson:"rejectedAt,omitempty"`
+	// Version management
 	CurrentVersion  int       `json:"currentVersion" bson:"currentVersion"` // Current version number
 
 	// Type-specific fields

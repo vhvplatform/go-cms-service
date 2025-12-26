@@ -19,12 +19,13 @@ type ViewQueue interface {
 
 // ArticleService handles article business logic
 type ArticleService struct {
-	repo           *repository.ArticleRepository
-	permissionRepo *repository.PermissionRepository
-	viewStatsRepo  *repository.ViewStatsRepository
-	viewQueue      ViewQueue
-	actionLogRepo  *repository.ActionLogRepository
-	versionRepo    *repository.ArticleVersionRepository
+	repo              *repository.ArticleRepository
+	permissionRepo    *repository.PermissionRepository
+	viewStatsRepo     *repository.ViewStatsRepository
+	viewQueue         ViewQueue
+	actionLogRepo     *repository.ActionLogRepository
+	versionRepo       *repository.ArticleVersionRepository
+	rejectionNoteRepo *repository.RejectionNoteRepository
 }
 
 // NewArticleService creates a new article service
@@ -35,14 +36,16 @@ func NewArticleService(
 	viewQueue ViewQueue,
 	actionLogRepo *repository.ActionLogRepository,
 	versionRepo *repository.ArticleVersionRepository,
+	rejectionNoteRepo *repository.RejectionNoteRepository,
 ) *ArticleService {
 	return &ArticleService{
-		repo:           repo,
-		permissionRepo: permissionRepo,
-		viewStatsRepo:  viewStatsRepo,
-		viewQueue:      viewQueue,
-		actionLogRepo:  actionLogRepo,
-		versionRepo:    versionRepo,
+		repo:              repo,
+		permissionRepo:    permissionRepo,
+		viewStatsRepo:     viewStatsRepo,
+		viewQueue:         viewQueue,
+		actionLogRepo:     actionLogRepo,
+		versionRepo:       versionRepo,
+		rejectionNoteRepo: rejectionNoteRepo,
 	}
 }
 
@@ -365,7 +368,7 @@ func (s *ArticleService) generateSlug(title string) string {
 }
 
 // RejectArticle rejects an article with a note
-func (s *ArticleService) RejectArticle(ctx context.Context, id primitive.ObjectID, userID string, userRole model.Role, note string) error {
+func (s *ArticleService) RejectArticle(ctx context.Context, id primitive.ObjectID, userID string, userName string, userRole model.Role, note string) error {
 	// Only editors and moderators can reject
 	if userRole != model.RoleEditor && userRole != model.RoleModerator {
 		return fmt.Errorf("insufficient permissions: only editors and moderators can reject articles")
@@ -378,13 +381,24 @@ func (s *ArticleService) RejectArticle(ctx context.Context, id primitive.ObjectI
 
 	oldStatus := article.Status
 	article.Status = model.ArticleStatusDraft
-	article.RejectionNote = note
-	article.RejectedBy = userID
-	now := time.Now()
-	article.RejectedAt = &now
 
 	if err := s.repo.Update(ctx, article); err != nil {
 		return err
+	}
+
+	// Create rejection note in separate table
+	if s.rejectionNoteRepo != nil {
+		rejectionNote := &model.RejectionNote{
+			ArticleID: article.ID,
+			UserID:    userID,
+			UserName:  userName,
+			UserRole:  userRole,
+			Note:      note,
+			IsResolved: false,
+		}
+		if err := s.rejectionNoteRepo.Create(ctx, rejectionNote); err != nil {
+			return err
+		}
 	}
 
 	// Log action
@@ -393,6 +407,7 @@ func (s *ArticleService) RejectArticle(ctx context.Context, id primitive.ObjectI
 			ArticleID:  article.ID,
 			ActionType: model.ActionTypeReject,
 			UserID:     userID,
+			UserName:   userName,
 			UserRole:   userRole,
 			Note:       note,
 			OldStatus:  oldStatus,
@@ -548,4 +563,53 @@ func (s *ArticleService) createVersion(ctx context.Context, article *model.Artic
 	}
 
 	return s.versionRepo.Create(ctx, version)
+}
+
+// AddRejectionNote adds a rejection note to an article (for conversation thread)
+func (s *ArticleService) AddRejectionNote(ctx context.Context, articleID primitive.ObjectID, userID string, userName string, userRole model.Role, note string, parentID *primitive.ObjectID) error {
+	if s.rejectionNoteRepo == nil {
+		return fmt.Errorf("rejection note repository not initialized")
+	}
+
+	rejectionNote := &model.RejectionNote{
+		ArticleID: articleID,
+		UserID:    userID,
+		UserName:  userName,
+		UserRole:  userRole,
+		Note:      note,
+		ParentID:  parentID,
+		IsResolved: false,
+	}
+
+	return s.rejectionNoteRepo.Create(ctx, rejectionNote)
+}
+
+// GetRejectionNotes gets all rejection notes for an article
+func (s *ArticleService) GetRejectionNotes(ctx context.Context, articleID primitive.ObjectID) ([]*model.RejectionNote, error) {
+	if s.rejectionNoteRepo == nil {
+		return nil, fmt.Errorf("rejection note repository not initialized")
+	}
+	return s.rejectionNoteRepo.FindByArticleID(ctx, articleID)
+}
+
+// ResolveRejectionNotes marks all rejection notes for an article as resolved
+func (s *ArticleService) ResolveRejectionNotes(ctx context.Context, articleID primitive.ObjectID, userID string, userRole model.Role) error {
+	// Only editors and moderators can resolve rejection notes
+	if userRole != model.RoleEditor && userRole != model.RoleModerator {
+		return fmt.Errorf("insufficient permissions: only editors and moderators can resolve rejection notes")
+	}
+
+	if s.rejectionNoteRepo == nil {
+		return fmt.Errorf("rejection note repository not initialized")
+	}
+
+	return s.rejectionNoteRepo.MarkAsResolved(ctx, articleID)
+}
+
+// GetUnresolvedRejectionCount gets the count of unresolved rejection notes for an article
+func (s *ArticleService) GetUnresolvedRejectionCount(ctx context.Context, articleID primitive.ObjectID) (int64, error) {
+	if s.rejectionNoteRepo == nil {
+		return 0, nil
+	}
+	return s.rejectionNoteRepo.CountUnresolvedByArticleID(ctx, articleID)
 }

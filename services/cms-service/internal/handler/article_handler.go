@@ -351,14 +351,97 @@ func (h *ArticleHandler) RejectArticle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := getUserID(r)
+	userName := getUserName(r)
 	userRole := getUserRole(r)
 
-	if err := h.service.RejectArticle(r.Context(), id, userID, userRole, req.Note); err != nil {
+	if err := h.service.RejectArticle(r.Context(), id, userID, userName, userRole, req.Note); err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	respondJSON(w, http.StatusOK, map[string]string{"message": "Article rejected"})
+}
+
+// AddRejectionNote handles POST /api/v1/articles/{id}/rejection-notes
+func (h *ArticleHandler) AddRejectionNote(w http.ResponseWriter, r *http.Request) {
+	id, err := getIDFromPath(r, "id")
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid article ID")
+		return
+	}
+
+	var req struct {
+		Note     string              `json:"note"`
+		ParentID *string             `json:"parentId,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	// Validate input
+	v := validator.NewArticleValidator()
+	if err := v.ValidateReject(id, req.Note); err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	userID := getUserID(r)
+	userName := getUserName(r)
+	userRole := getUserRole(r)
+
+	var parentID *primitive.ObjectID
+	if req.ParentID != nil && *req.ParentID != "" {
+		objID, err := primitive.ObjectIDFromHex(*req.ParentID)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid parent ID")
+			return
+		}
+		parentID = &objID
+	}
+
+	if err := h.service.AddRejectionNote(r.Context(), id, userID, userName, userRole, req.Note, parentID); err != nil {
+		respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, map[string]string{"message": "Note added successfully"})
+}
+
+// GetRejectionNotes handles GET /api/v1/articles/{id}/rejection-notes
+func (h *ArticleHandler) GetRejectionNotes(w http.ResponseWriter, r *http.Request) {
+	id, err := getIDFromPath(r, "id")
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid article ID")
+		return
+	}
+
+	notes, err := h.service.GetRejectionNotes(r.Context(), id)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondJSON(w, http.StatusOK, notes)
+}
+
+// ResolveRejectionNotes handles POST /api/v1/articles/{id}/rejection-notes/resolve
+func (h *ArticleHandler) ResolveRejectionNotes(w http.ResponseWriter, r *http.Request) {
+	id, err := getIDFromPath(r, "id")
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid article ID")
+		return
+	}
+
+	userID := getUserID(r)
+	userRole := getUserRole(r)
+
+	if err := h.service.ResolveRejectionNotes(r.Context(), id, userID, userRole); err != nil {
+		respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]string{"message": "Rejection notes resolved"})
 }
 
 // GetArticleVersions handles GET /api/v1/articles/{id}/versions

@@ -60,7 +60,7 @@ func (m *MockViewQueue) Enqueue(articleID primitive.ObjectID) error {
 func TestArticleService_Create(t *testing.T) {
 	// Arrange
 	repo := NewMockArticleRepository()
-	service := service.NewArticleService(repo, nil, nil, nil)
+	service := service.NewArticleService(repo, nil, nil, nil, nil, nil, nil)
 	
 	article := &model.Article{
 		Title:       "Test Article",
@@ -97,7 +97,7 @@ func TestArticleService_Create(t *testing.T) {
 // TestArticleService_GenerateSlug tests slug generation
 func TestArticleService_GenerateSlug(t *testing.T) {
 	repo := NewMockArticleRepository()
-	service := service.NewArticleService(repo, nil, nil, nil)
+	service := service.NewArticleService(repo, nil, nil, nil, nil, nil, nil)
 	
 	testCases := []struct {
 		name     string
@@ -145,7 +145,7 @@ func TestArticleService_GenerateSlug(t *testing.T) {
 // TestArticleService_Update_PermissionCheck tests permission checking during update
 func TestArticleService_Update_PermissionCheck(t *testing.T) {
 	repo := NewMockArticleRepository()
-	service := service.NewArticleService(repo, nil, nil, nil)
+	service := service.NewArticleService(repo, nil, nil, nil, nil, nil, nil)
 	
 	// Create a published article
 	article := &model.Article{
@@ -176,7 +176,7 @@ func TestArticleService_Update_PermissionCheck(t *testing.T) {
 // TestArticleService_CharCount tests character counting
 func TestArticleService_CharCount(t *testing.T) {
 	repo := NewMockArticleRepository()
-	service := service.NewArticleService(repo, nil, nil, nil)
+	service := service.NewArticleService(repo, nil, nil, nil, nil, nil, nil)
 	
 	article := &model.Article{
 		Title:       "Test",
@@ -199,7 +199,7 @@ func TestArticleService_CharCount(t *testing.T) {
 // BenchmarkArticleService_Create benchmarks article creation
 func BenchmarkArticleService_Create(b *testing.B) {
 	repo := NewMockArticleRepository()
-	service := service.NewArticleService(repo, nil, nil, nil)
+	service := service.NewArticleService(repo, nil, nil, nil, nil, nil, nil)
 	
 	b.ResetTimer()
 	

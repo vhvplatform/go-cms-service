@@ -62,6 +62,7 @@ func main() {
 	viewStatsRepo := repository.NewViewStatsRepository(db)
 	actionLogRepo := repository.NewActionLogRepository(db)
 	versionRepo := repository.NewArticleVersionRepository(db)
+	rejectionNoteRepo := repository.NewRejectionNoteRepository(db)
 
 	// Initialize view queue
 	viewQueue := worker.NewViewQueue(articleRepo, viewStatsRepo, 10000, 100, 5*time.Second)
@@ -69,7 +70,7 @@ func main() {
 	defer viewQueue.Stop()
 
 	// Initialize services
-	articleService := service.NewArticleService(articleRepo, permissionRepo, viewStatsRepo, viewQueue, actionLogRepo, versionRepo)
+	articleService := service.NewArticleService(articleRepo, permissionRepo, viewStatsRepo, viewQueue, actionLogRepo, versionRepo, rejectionNoteRepo)
 	categoryService := service.NewCategoryService(categoryRepo)
 
 	// Initialize handlers
