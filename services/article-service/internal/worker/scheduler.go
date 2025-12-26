@@ -63,7 +63,7 @@ func (s *Scheduler) processPublishSchedule(ctx context.Context) {
 	for _, article := range articles {
 		log.Printf("Auto-publishing article: %s (ID: %s)", article.Title, article.ID.Hex())
 		
-		err := s.articleService.UpdateStatus(ctx, article.ID, model.ArticleStatusPublished, "scheduler")
+		err := s.articleService.UpdateStatus(ctx, article.ID, model.ArticleStatusPublished, "scheduler", model.RoleModerator)
 		if err != nil {
 			log.Printf("Error publishing article %s: %v", article.ID.Hex(), err)
 			continue
@@ -88,7 +88,7 @@ func (s *Scheduler) processExpireSchedule(ctx context.Context) {
 	for _, article := range articles {
 		log.Printf("Auto-expiring article: %s (ID: %s)", article.Title, article.ID.Hex())
 		
-		err := s.articleService.UpdateStatus(ctx, article.ID, model.ArticleStatusArchived, "scheduler")
+		err := s.articleService.UpdateStatus(ctx, article.ID, model.ArticleStatusArchived, "scheduler", model.RoleModerator)
 		if err != nil {
 			log.Printf("Error expiring article %s: %v", article.ID.Hex(), err)
 			continue

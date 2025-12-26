@@ -57,12 +57,17 @@ func main() {
 	// Initialize repositories
 	articleRepo := repository.NewArticleRepository(db)
 	categoryRepo := repository.NewCategoryRepository(db)
-	eventLineRepo := repository.NewEventLineRepository(db)
+	_ = repository.NewEventStreamRepository(db) // Initialize for migrations
 	permissionRepo := repository.NewPermissionRepository(db)
 	viewStatsRepo := repository.NewViewStatsRepository(db)
 
+	// Initialize view queue
+	viewQueue := worker.NewViewQueue(articleRepo, viewStatsRepo, 10000, 100, 5*time.Second)
+	viewQueue.Start(ctx)
+	defer viewQueue.Stop()
+
 	// Initialize services
-	articleService := service.NewArticleService(articleRepo, permissionRepo, viewStatsRepo)
+	articleService := service.NewArticleService(articleRepo, permissionRepo, viewStatsRepo, viewQueue)
 	categoryService := service.NewCategoryService(categoryRepo)
 
 	// Initialize handlers

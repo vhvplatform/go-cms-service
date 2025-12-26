@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/vhvplatform/go-cms-service/services/article-service/internal/model"

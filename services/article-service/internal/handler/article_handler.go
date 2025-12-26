@@ -147,8 +147,9 @@ func (h *ArticleHandler) UpdateArticle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := getUserID(r)
-	if err := h.service.Update(r.Context(), article, userID); err != nil {
-		respondError(w, http.StatusInternalServerError, err.Error())
+	userRole := getUserRole(r)
+	if err := h.service.Update(r.Context(), article, userID, userRole); err != nil {
+		respondError(w, http.StatusForbidden, err.Error())
 		return
 	}
 
@@ -180,7 +181,8 @@ func (h *ArticleHandler) PublishArticle(w http.ResponseWriter, r *http.Request) 
 	}
 
 	userID := getUserID(r)
-	if err := h.service.Publish(r.Context(), id, userID); err != nil {
+	userRole := getUserRole(r)
+	if err := h.service.Publish(r.Context(), id, userID, userRole); err != nil {
 		respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}

@@ -3,7 +3,6 @@ package migrations
 import (
 	"context"
 	"log"
-	"time"
 
 	"github.com/vhvplatform/go-cms-service/services/article-service/internal/model"
 	"github.com/vhvplatform/go-cms-service/services/article-service/internal/repository"
@@ -37,12 +36,12 @@ func (m *InitialMigration) Up(ctx context.Context, db *mongo.Database) error {
 	}
 	log.Println("✓ Created category indexes")
 
-	// Create indexes for event lines
-	eventLineRepo := repository.NewEventLineRepository(db)
-	if err := eventLineRepo.CreateIndexes(ctx); err != nil {
+	// Create indexes for event streams
+	eventStreamRepo := repository.NewEventStreamRepository(db)
+	if err := eventStreamRepo.CreateIndexes(ctx); err != nil {
 		return err
 	}
-	log.Println("✓ Created event line indexes")
+	log.Println("✓ Created event stream indexes")
 
 	// Create indexes for permissions
 	permissionRepo := repository.NewPermissionRepository(db)

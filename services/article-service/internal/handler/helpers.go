@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/vhvplatform/go-cms-service/services/article-service/internal/model"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -50,4 +51,14 @@ func getUserID(r *http.Request) string {
 		}
 	}
 	return "system" // Default for testing
+}
+
+func getUserRole(r *http.Request) model.Role {
+	// Get user role from context (set by auth middleware)
+	if userRole := r.Context().Value("userRole"); userRole != nil {
+		if role, ok := userRole.(string); ok {
+			return model.Role(role)
+		}
+	}
+	return model.RoleWriter // Default for testing
 }
