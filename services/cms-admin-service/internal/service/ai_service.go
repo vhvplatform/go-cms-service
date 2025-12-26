@@ -217,7 +217,7 @@ func (s *AIService) spellCheckOpenAI(ctx context.Context, config *model.AIConfig
 		sanitizedText = sanitizedText[:5000] // Limit length
 	}
 	
-	prompt := "Check the following text for spelling and grammar errors. Return a JSON array of corrections."
+	_ = "Check the following text for spelling and grammar errors. Return a JSON array of corrections."
 	
 	// Mock response for now - in production, integrate with actual OpenAI API
 	return &model.SpellCheckResult{

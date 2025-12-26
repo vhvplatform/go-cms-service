@@ -14,14 +14,14 @@ RUN go mod download && go mod verify
 COPY pkg ./pkg
 
 # Copy service source code
-COPY services/cms-stats-service ./services/cms-stats-service
+COPY services/cms-frontend-service ./services/cms-frontend-service
 
 # Build the application with optimizations
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags='-w -s -extldflags "-static"' \
     -a -installsuffix cgo \
-    -o /app/cms-stats-service \
-    ./services/cms-stats-service/cmd
+    -o /app/cms-frontend-service \
+    ./services/cms-frontend-service/cmd
 
 # Final stage
 FROM scratch
@@ -31,7 +31,7 @@ COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 # Copy the binary
-COPY --from=builder /app/cms-stats-service /app/cms-stats-service
+COPY --from=builder /app/cms-frontend-service /app/cms-frontend-service
 
 # Create non-root user
 USER 65534:65534
@@ -39,11 +39,11 @@ USER 65534:65534
 WORKDIR /app
 
 # Expose port
-EXPOSE 8081
+EXPOSE 8082
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD ["/app/cms-stats-service", "--health"]
+    CMD ["/app/cms-frontend-service", "--health"]
 
 # Run the application
-ENTRYPOINT ["/app/cms-stats-service"]
+ENTRYPOINT ["/app/cms-frontend-service"]

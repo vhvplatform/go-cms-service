@@ -1,21 +1,29 @@
+# Build stage
 FROM golang:1.21-alpine AS builder
 
 # Install build dependencies
-RUN apk add --no-cache git
+RUN apk add --no-cache git ca-certificates tzdata
 
-WORKDIR /app
+WORKDIR /build
 
-# Copy go mod files
-COPY go.mod go.sum* ./
-RUN go mod download
+# Copy go mod files for dependency caching
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
 
-# Copy source code
+# Copy pkg directory (shared infrastructure)
+COPY pkg ./pkg
+
+# Copy service source code
 COPY services/cms-media-service ./services/cms-media-service
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /cms-media-service ./services/cms-media-service/cmd
+# Build the application with optimizations
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags='-w -s -extldflags "-static"' \
+    -a -installsuffix cgo \
+    -o /app/cms-media-service \
+    ./services/cms-media-service/cmd
 
-# Final stage
+# Final stage - using alpine for media processing tools
 FROM alpine:latest
 
 # Install runtime dependencies for media processing
@@ -27,16 +35,23 @@ RUN apk add --no-cache \
     ca-certificates \
     tzdata
 
-WORKDIR /root/
-
-# Copy the binary from builder
-COPY --from=builder /cms-media-service .
+# Copy the binary
+COPY --from=builder /app/cms-media-service /app/cms-media-service
 
 # Create uploads directory
-RUN mkdir -p /root/uploads
+RUN mkdir -p /app/uploads && chown -R nobody:nobody /app
+
+# Create non-root user
+USER nobody:nobody
+
+WORKDIR /app
 
 # Expose port
 EXPOSE 8083
 
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD ["wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8083/health"]
+
 # Run the application
-CMD ["./cms-media-service"]
+ENTRYPOINT ["/app/cms-media-service"]
