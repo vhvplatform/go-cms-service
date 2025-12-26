@@ -18,13 +18,13 @@ type ViewEvent struct {
 
 // ViewQueue handles asynchronous view counting
 type ViewQueue struct {
-	queue          chan ViewEvent
-	articleRepo    *repository.ArticleRepository
-	viewStatsRepo  *repository.ViewStatsRepository
-	batchSize      int
-	flushInterval  time.Duration
-	stopChan       chan bool
-	wg             sync.WaitGroup
+	queue         chan ViewEvent
+	articleRepo   *repository.ArticleRepository
+	viewStatsRepo *repository.ViewStatsRepository
+	batchSize     int
+	flushInterval time.Duration
+	stopChan      chan bool
+	wg            sync.WaitGroup
 }
 
 // NewViewQueue creates a new view queue
@@ -85,7 +85,7 @@ func (q *ViewQueue) processQueue(ctx context.Context) {
 		select {
 		case event := <-q.queue:
 			batch = append(batch, event)
-			
+
 			// Process batch if it reaches the batch size
 			if len(batch) >= q.batchSize {
 				q.processBatch(ctx, batch)

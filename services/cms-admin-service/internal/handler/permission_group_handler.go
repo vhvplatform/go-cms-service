@@ -59,12 +59,12 @@ func (h *PermissionGroupHandler) GetPermissionGroup(w http.ResponseWriter, r *ht
 // ListPermissionGroups handles GET /api/v1/permission-groups
 func (h *PermissionGroupHandler) ListPermissionGroups(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	
+
 	page, _ := strconv.Atoi(query.Get("page"))
 	if page < 1 {
 		page = 1
 	}
-	
+
 	limit, _ := strconv.Atoi(query.Get("limit"))
 	if limit < 1 || limit > 100 {
 		limit = 20

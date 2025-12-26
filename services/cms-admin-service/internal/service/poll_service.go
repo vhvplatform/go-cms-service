@@ -30,21 +30,21 @@ func (s *PollService) CreatePoll(ctx context.Context, poll *model.Poll, userID s
 	if userRole != model.RoleEditor && userRole != model.RoleModerator {
 		return fmt.Errorf("insufficient permissions: only editors and moderators can create polls")
 	}
-	
+
 	// Validate poll
 	poll.Question = strings.TrimSpace(poll.Question)
 	if poll.Question == "" {
 		return fmt.Errorf("poll question cannot be empty")
 	}
-	
+
 	if len(poll.Options) < 2 {
 		return fmt.Errorf("poll must have at least 2 options")
 	}
-	
+
 	if len(poll.Options) > 10 {
 		return fmt.Errorf("poll cannot have more than 10 options")
 	}
-	
+
 	// Validate and assign IDs to options
 	for i := range poll.Options {
 		poll.Options[i].Text = strings.TrimSpace(poll.Options[i].Text)
@@ -55,28 +55,28 @@ func (s *PollService) CreatePoll(ctx context.Context, poll *model.Poll, userID s
 			poll.Options[i].ID = fmt.Sprintf("option_%d", i+1)
 		}
 	}
-	
+
 	// Validate multiple selection settings
 	if poll.IsMultiple && poll.MaxSelections > len(poll.Options) {
 		poll.MaxSelections = len(poll.Options)
 	}
-	
+
 	poll.CreatedBy = userID
-	
+
 	// Create poll
 	if err := s.repo.Create(ctx, poll); err != nil {
 		return err
 	}
-	
+
 	// Update article to link poll
 	article, err := s.articleRepo.FindByID(ctx, poll.ArticleID)
 	if err != nil {
 		return fmt.Errorf("article not found: %w", err)
 	}
-	
+
 	article.HasPoll = true
 	article.PollID = &poll.ID
-	
+
 	return s.articleRepo.Update(ctx, article)
 }
 
@@ -86,13 +86,13 @@ func (s *PollService) GetPoll(ctx context.Context, pollID primitive.ObjectID, us
 	if err != nil {
 		return nil, nil, err
 	}
-	
+
 	// Get user's vote if they voted
 	var userVote *model.PollVote
 	if userID != "" {
 		userVote, _ = s.repo.GetUserVote(ctx, pollID, userID)
 	}
-	
+
 	return poll, userVote, nil
 }
 
@@ -102,13 +102,13 @@ func (s *PollService) GetArticlePoll(ctx context.Context, articleID primitive.Ob
 	if err != nil {
 		return nil, nil, err
 	}
-	
+
 	// Get user's vote if they voted
 	var userVote *model.PollVote
 	if userID != "" {
 		userVote, _ = s.repo.GetUserVote(ctx, poll.ID, userID)
 	}
-	
+
 	return poll, userVote, nil
 }
 
@@ -117,18 +117,18 @@ func (s *PollService) VoteOnPoll(ctx context.Context, pollID primitive.ObjectID,
 	if userID == "" {
 		return fmt.Errorf("user must be logged in to vote")
 	}
-	
+
 	if len(optionIDs) == 0 {
 		return fmt.Errorf("must select at least one option")
 	}
-	
+
 	vote := &model.PollVote{
 		PollID:    pollID,
 		UserID:    userID,
 		OptionIDs: optionIDs,
 		IPAddress: ipAddress,
 	}
-	
+
 	return s.repo.Vote(ctx, vote)
 }
 
@@ -138,27 +138,27 @@ func (s *PollService) UpdatePoll(ctx context.Context, poll *model.Poll, userID s
 	if userRole != model.RoleEditor && userRole != model.RoleModerator {
 		return fmt.Errorf("insufficient permissions: only editors and moderators can update polls")
 	}
-	
+
 	// Get existing poll to check if it has votes
 	existing, err := s.repo.FindByID(ctx, poll.ID)
 	if err != nil {
 		return err
 	}
-	
+
 	if existing.TotalVotes > 0 {
 		return fmt.Errorf("cannot update poll after votes have been cast")
 	}
-	
+
 	// Validate poll
 	poll.Question = strings.TrimSpace(poll.Question)
 	if poll.Question == "" {
 		return fmt.Errorf("poll question cannot be empty")
 	}
-	
+
 	if len(poll.Options) < 2 {
 		return fmt.Errorf("poll must have at least 2 options")
 	}
-	
+
 	return s.repo.Update(ctx, poll)
 }
 
@@ -168,7 +168,7 @@ func (s *PollService) SetPollStatus(ctx context.Context, pollID primitive.Object
 	if userRole != model.RoleEditor && userRole != model.RoleModerator {
 		return fmt.Errorf("insufficient permissions: only editors and moderators can change poll status")
 	}
-	
+
 	return s.repo.SetPollStatus(ctx, pollID, isActive)
 }
 

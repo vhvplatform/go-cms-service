@@ -28,7 +28,7 @@ func (r *PermissionRepository) Create(ctx context.Context, permission *model.Per
 	permission.ID = primitive.NewObjectID()
 	permission.CreatedAt = time.Now()
 	permission.UpdatedAt = time.Now()
-	
+
 	_, err := r.collection.InsertOne(ctx, permission)
 	return err
 }
@@ -49,10 +49,10 @@ func (r *PermissionRepository) FindByID(ctx context.Context, id primitive.Object
 // Update updates a permission
 func (r *PermissionRepository) Update(ctx context.Context, permission *model.Permission) error {
 	permission.UpdatedAt = time.Now()
-	
+
 	filter := bson.M{"_id": permission.ID}
 	update := bson.M{"$set": permission}
-	
+
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
 }

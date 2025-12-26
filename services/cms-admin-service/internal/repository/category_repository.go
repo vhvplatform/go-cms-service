@@ -29,7 +29,7 @@ func (r *CategoryRepository) Create(ctx context.Context, category *model.Categor
 	category.ID = primitive.NewObjectID()
 	category.CreatedAt = time.Now()
 	category.UpdatedAt = time.Now()
-	
+
 	_, err := r.collection.InsertOne(ctx, category)
 	return err
 }
@@ -63,10 +63,10 @@ func (r *CategoryRepository) FindBySlug(ctx context.Context, slug string) (*mode
 // Update updates a category
 func (r *CategoryRepository) Update(ctx context.Context, category *model.Category) error {
 	category.UpdatedAt = time.Now()
-	
+
 	filter := bson.M{"_id": category.ID}
 	update := bson.M{"$set": category}
-	
+
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
 }

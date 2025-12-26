@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	MaxCommentLength      = 2000
-	MaxCommentsPerHour    = 10
+	MaxCommentLength       = 2000
+	MaxCommentsPerHour     = 10
 	MaxCommentNestingLevel = 2 // 0, 1, 2 = 3 levels
 )
 
@@ -38,7 +38,7 @@ func (s *CommentService) CreateComment(ctx context.Context, comment *model.Comme
 	if len(comment.Content) > MaxCommentLength {
 		return fmt.Errorf("comment exceeds maximum length of %d characters", MaxCommentLength)
 	}
-	
+
 	// Check rate limit
 	allowed, err := s.repo.CheckRateLimit(ctx, userID, MaxCommentsPerHour)
 	if err != nil {
@@ -47,24 +47,24 @@ func (s *CommentService) CreateComment(ctx context.Context, comment *model.Comme
 	if !allowed {
 		return fmt.Errorf("rate limit exceeded: maximum %d comments per hour", MaxCommentsPerHour)
 	}
-	
+
 	// Set user info
 	comment.UserID = userID
 	comment.UserName = userName
-	
+
 	// Handle nested comments
 	if comment.ParentID != nil {
 		parent, err := s.repo.FindByID(ctx, *comment.ParentID)
 		if err != nil {
 			return fmt.Errorf("parent comment not found: %w", err)
 		}
-		
+
 		// Check nesting level
 		comment.Level = parent.Level + 1
 		if comment.Level > MaxCommentNestingLevel {
 			return fmt.Errorf("maximum comment nesting level (%d) exceeded", MaxCommentNestingLevel+1)
 		}
-		
+
 		// Increment parent reply count
 		if err := s.repo.IncrementReplyCount(ctx, *comment.ParentID); err != nil {
 			return fmt.Errorf("failed to increment reply count: %w", err)
@@ -72,7 +72,7 @@ func (s *CommentService) CreateComment(ctx context.Context, comment *model.Comme
 	} else {
 		comment.Level = 0
 	}
-	
+
 	return s.repo.Create(ctx, comment)
 }
 
@@ -92,12 +92,12 @@ func (s *CommentService) GetCommentThread(ctx context.Context, commentID primiti
 	if err != nil {
 		return nil, nil, err
 	}
-	
+
 	replies, err := s.repo.FindRepliesByParentID(ctx, commentID, sortBy)
 	if err != nil {
 		return nil, nil, err
 	}
-	
+
 	return comment, replies, nil
 }
 
@@ -107,7 +107,7 @@ func (s *CommentService) ModerateComment(ctx context.Context, commentID primitiv
 	if userRole != model.RoleEditor && userRole != model.RoleModerator {
 		return fmt.Errorf("insufficient permissions: only editors and moderators can moderate comments")
 	}
-	
+
 	return s.repo.UpdateStatus(ctx, commentID, status, moderatorID, note)
 }
 
@@ -132,13 +132,13 @@ func (s *CommentService) ReportComment(ctx context.Context, commentID primitive.
 	if reason == "" {
 		return fmt.Errorf("report reason cannot be empty")
 	}
-	
+
 	report := &model.CommentReport{
 		CommentID:  commentID,
 		ReporterID: userID,
 		Reason:     reason,
 	}
-	
+
 	return s.repo.ReportComment(ctx, report)
 }
 

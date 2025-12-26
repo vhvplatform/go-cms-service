@@ -14,10 +14,10 @@ import (
 
 // PublicArticleService handles article business logic for public/user-facing APIs with caching
 type PublicArticleService struct {
-	repo           *repository.ArticleRepository
-	cache          cache.Cache
-	cacheTTL       time.Duration
-	viewQueue      ViewQueue
+	repo      *repository.ArticleRepository
+	cache     cache.Cache
+	cacheTTL  time.Duration
+	viewQueue ViewQueue
 }
 
 // NewPublicArticleService creates a new public article service
@@ -117,10 +117,10 @@ func (s *PublicArticleService) ListPublicArticles(ctx context.Context, filter ma
 
 	// Cache miss - get from database
 	log.Printf("Cache miss for article list")
-	
+
 	// Force published status filter
 	filter["status"] = model.ArticleStatusPublished
-	
+
 	// Add publish date filter
 	now := time.Now()
 	if filter["publishAt"] == nil {
@@ -156,7 +156,7 @@ func (s *PublicArticleService) IncrementViewCount(ctx context.Context, id primit
 	if s.viewQueue != nil {
 		return s.viewQueue.Enqueue(id)
 	}
-	
+
 	// Fallback to synchronous processing if queue not available
 	return s.repo.IncrementViewCount(ctx, id)
 }
@@ -164,23 +164,23 @@ func (s *PublicArticleService) IncrementViewCount(ctx context.Context, id primit
 // InvalidateArticleCache invalidates cache for a specific article (called when admin updates)
 func (s *PublicArticleService) InvalidateArticleCache(ctx context.Context, article *model.Article) error {
 	log.Printf("Invalidating cache for article: %s", article.ID.Hex())
-	
+
 	keys := []string{
 		fmt.Sprintf("article:public:id:%s", article.ID.Hex()),
 		fmt.Sprintf("article:public:slug:%s", article.Slug),
 	}
-	
+
 	if err := s.cache.Delete(ctx, keys...); err != nil {
 		log.Printf("Failed to invalidate article cache: %v", err)
 		return err
 	}
-	
+
 	// Invalidate list caches
 	if err := s.cache.DeletePattern(ctx, "articles:public:list:*"); err != nil {
 		log.Printf("Failed to invalidate article list cache: %v", err)
 		return err
 	}
-	
+
 	log.Printf("Successfully invalidated cache for article: %s", article.ID.Hex())
 	return nil
 }
@@ -188,19 +188,19 @@ func (s *PublicArticleService) InvalidateArticleCache(ctx context.Context, artic
 // InvalidateAllArticleCaches invalidates all article caches
 func (s *PublicArticleService) InvalidateAllArticleCaches(ctx context.Context) error {
 	log.Println("Invalidating all article caches")
-	
+
 	patterns := []string{
 		"article:public:*",
 		"articles:public:*",
 	}
-	
+
 	for _, pattern := range patterns {
 		if err := s.cache.DeletePattern(ctx, pattern); err != nil {
 			log.Printf("Failed to invalidate cache pattern %s: %v", pattern, err)
 			return err
 		}
 	}
-	
+
 	log.Println("Successfully invalidated all article caches")
 	return nil
 }
@@ -208,21 +208,21 @@ func (s *PublicArticleService) InvalidateAllArticleCaches(ctx context.Context) e
 // isPubliclyAccessible checks if an article is publicly accessible
 func (s *PublicArticleService) isPubliclyAccessible(article *model.Article) bool {
 	now := time.Now()
-	
+
 	// Must be published
 	if article.Status != model.ArticleStatusPublished {
 		return false
 	}
-	
+
 	// Must be past publish date
 	if article.PublishAt.After(now) {
 		return false
 	}
-	
+
 	// Must not be expired
 	if article.ExpiredAt != nil && now.After(*article.ExpiredAt) {
 		return false
 	}
-	
+
 	return true
 }

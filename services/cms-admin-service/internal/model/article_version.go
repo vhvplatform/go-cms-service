@@ -24,11 +24,11 @@ type ArticleVersion struct {
 	Status      ArticleStatus      `json:"status" bson:"status"`
 	CreatedAt   time.Time          `json:"createdAt" bson:"createdAt"`
 	CreatedBy   string             `json:"createdBy" bson:"createdBy"`
-	
+
 	// Store entire article snapshot for full restore capability
 	FullSnapshot *Article `json:"fullSnapshot,omitempty" bson:"fullSnapshot,omitempty"`
-	
+
 	// Metadata about this version
-	ChangeNote   string    `json:"changeNote,omitempty" bson:"changeNote,omitempty"`
-	RestoredFrom *int      `json:"restoredFrom,omitempty" bson:"restoredFrom,omitempty"` // Version number this was restored from
+	ChangeNote   string `json:"changeNote,omitempty" bson:"changeNote,omitempty"`
+	RestoredFrom *int   `json:"restoredFrom,omitempty" bson:"restoredFrom,omitempty"` // Version number this was restored from
 }

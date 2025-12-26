@@ -23,7 +23,7 @@ func main() {
 	// Load configuration
 	cfg := config.NewConfig("cms-admin-service")
 	mongoCfg := config.NewMongoConfig()
-	
+
 	baseURL := config.GetEnv("BASE_URL", "http://localhost:"+cfg.ServerPort)
 	uploadDir := config.GetEnv("UPLOAD_DIR", "./uploads")
 	runMigrations := config.GetEnvBool("RUN_MIGRATIONS", true)
@@ -178,7 +178,7 @@ func main() {
 
 	// Comment routes
 	mux.Handle("/api/v1/comments/pending", authMiddleware.Authenticate(http.HandlerFunc(commentHandler.GetPendingComments)))
-	
+
 	// User favorites route
 	mux.Handle("/api/v1/users/favorites", authMiddleware.Authenticate(http.HandlerFunc(commentHandler.GetUserFavorites)))
 
@@ -290,6 +290,6 @@ func main() {
 }
 
 func containsSegment(path, segment string) bool {
-	return len(path) > 0 && (path[len(path)-len(segment):] == segment || 
+	return len(path) > 0 && (path[len(path)-len(segment):] == segment ||
 		len(path) > len(segment) && path[len(path)-len(segment)-1:] == "/"+segment)
 }

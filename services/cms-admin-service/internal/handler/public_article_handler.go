@@ -59,13 +59,13 @@ func (h *PublicArticleHandler) GetArticleBySlug(w http.ResponseWriter, r *http.R
 // ListArticles handles GET /api/v1/public/articles
 func (h *PublicArticleHandler) ListArticles(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	
+
 	// Parse pagination parameters
 	page, _ := strconv.Atoi(query.Get("page"))
 	if page < 1 {
 		page = 1
 	}
-	
+
 	limit, _ := strconv.Atoi(query.Get("limit"))
 	if limit < 1 || limit > 100 {
 		limit = 20
@@ -73,17 +73,17 @@ func (h *PublicArticleHandler) ListArticles(w http.ResponseWriter, r *http.Reque
 
 	// Build filter
 	filter := make(map[string]interface{})
-	
+
 	if categoryID := query.Get("categoryId"); categoryID != "" {
 		if id, err := primitive.ObjectIDFromHex(categoryID); err == nil {
 			filter["categoryId"] = id
 		}
 	}
-	
+
 	if articleType := query.Get("articleType"); articleType != "" {
 		filter["articleType"] = model.ArticleType(articleType)
 	}
-	
+
 	if eventStreamID := query.Get("eventStreamId"); eventStreamID != "" {
 		if id, err := primitive.ObjectIDFromHex(eventStreamID); err == nil {
 			filter["eventStreamId"] = id

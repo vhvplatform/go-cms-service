@@ -25,7 +25,7 @@ func NewSensitiveKeywordRepository(db *mongo.Database) *SensitiveKeywordReposito
 func (r *SensitiveKeywordRepository) Create(ctx context.Context, keyword *model.SensitiveKeyword) error {
 	keyword.CreatedAt = time.Now()
 	keyword.UpdatedAt = time.Now()
-	
+
 	result, err := r.collection.InsertOne(ctx, keyword)
 	if err != nil {
 		return err
@@ -50,13 +50,13 @@ func (r *SensitiveKeywordRepository) GetByTenant(ctx context.Context, tenantID s
 	if activeOnly {
 		filter["is_active"] = true
 	}
-	
+
 	cursor, err := r.collection.Find(ctx, filter, options.Find().SetSort(bson.M{"severity": -1, "created_at": -1}))
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var keywords []*model.SensitiveKeyword
 	if err := cursor.All(ctx, &keywords); err != nil {
 		return nil, err
@@ -71,13 +71,13 @@ func (r *SensitiveKeywordRepository) GetByCategory(ctx context.Context, tenantID
 		"category":  category,
 		"is_active": true,
 	}
-	
+
 	cursor, err := r.collection.Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var keywords []*model.SensitiveKeyword
 	if err := cursor.All(ctx, &keywords); err != nil {
 		return nil, err
@@ -88,11 +88,11 @@ func (r *SensitiveKeywordRepository) GetByCategory(ctx context.Context, tenantID
 // Update updates a keyword
 func (r *SensitiveKeywordRepository) Update(ctx context.Context, keyword *model.SensitiveKeyword) error {
 	keyword.UpdatedAt = time.Now()
-	
+
 	update := bson.M{
 		"$set": keyword,
 	}
-	
+
 	_, err := r.collection.UpdateOne(ctx, bson.M{"_id": keyword.ID}, update)
 	return err
 }
@@ -108,7 +108,7 @@ func (r *SensitiveKeywordRepository) BulkCreate(ctx context.Context, keywords []
 	if len(keywords) == 0 {
 		return nil
 	}
-	
+
 	now := time.Now()
 	docs := make([]interface{}, len(keywords))
 	for i, k := range keywords {
@@ -116,7 +116,7 @@ func (r *SensitiveKeywordRepository) BulkCreate(ctx context.Context, keywords []
 		k.UpdatedAt = now
 		docs[i] = k
 	}
-	
+
 	_, err := r.collection.InsertMany(ctx, docs)
 	return err
 }

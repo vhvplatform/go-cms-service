@@ -27,21 +27,21 @@ func (vp *VideoProcessor) ConvertToHLS(inputPath string, outputName string) (str
 	if err := os.MkdirAll(baseDir, 0755); err != nil {
 		return "", nil, err
 	}
-	
+
 	m3u8Path := filepath.Join(baseDir, "master.m3u8")
-	
+
 	// Generate multiple resolutions
 	resolutions := []VideoResolution{
 		{Name: "360p", Width: 640, Height: 360, Bitrate: "800k"},
 		{Name: "720p", Width: 1280, Height: 720, Bitrate: "2500k"},
 		{Name: "1080p", Width: 1920, Height: 1080, Bitrate: "5000k"},
 	}
-	
+
 	var generatedResolutions []VideoResolution
-	
+
 	for _, res := range resolutions {
 		outputPath := filepath.Join(baseDir, fmt.Sprintf("%s.m3u8", res.Name))
-		
+
 		args := []string{
 			"-i", inputPath,
 			"-vf", fmt.Sprintf("scale=%d:%d", res.Width, res.Height),
@@ -55,21 +55,21 @@ func (vp *VideoProcessor) ConvertToHLS(inputPath string, outputName string) (str
 			"-f", "hls",
 			outputPath,
 		}
-		
+
 		cmd := exec.Command("ffmpeg", args...)
 		if err := cmd.Run(); err != nil {
 			// Skip this resolution if conversion fails
 			continue
 		}
-		
+
 		generatedResolutions = append(generatedResolutions, res)
 	}
-	
+
 	// Create master playlist
 	if err := vp.createMasterPlaylist(m3u8Path, generatedResolutions); err != nil {
 		return "", nil, err
 	}
-	
+
 	return m3u8Path, generatedResolutions, nil
 }
 
@@ -78,16 +78,16 @@ func (vp *VideoProcessor) createMasterPlaylist(masterPath string, resolutions []
 	var content strings.Builder
 	content.WriteString("#EXTM3U\n")
 	content.WriteString("#EXT-X-VERSION:3\n\n")
-	
+
 	for _, res := range resolutions {
 		bandwidth, _ := strconv.Atoi(strings.TrimSuffix(res.Bitrate, "k"))
 		bandwidth *= 1000
-		
-		content.WriteString(fmt.Sprintf("#EXT-X-STREAM-INF:BANDWIDTH=%d,RESOLUTION=%dx%d\n", 
+
+		content.WriteString(fmt.Sprintf("#EXT-X-STREAM-INF:BANDWIDTH=%d,RESOLUTION=%dx%d\n",
 			bandwidth, res.Width, res.Height))
 		content.WriteString(fmt.Sprintf("%s.m3u8\n\n", res.Name))
 	}
-	
+
 	return os.WriteFile(masterPath, []byte(content.String()), 0644)
 }
 
@@ -101,7 +101,7 @@ func (vp *VideoProcessor) ExtractThumbnail(videoPath, outputPath string, timeOff
 		"-y",
 		outputPath,
 	}
-	
+
 	cmd := exec.Command("ffmpeg", args...)
 	return cmd.Run()
 }
@@ -114,18 +114,18 @@ func (vp *VideoProcessor) GetVideoDuration(videoPath string) (float64, error) {
 		"-of", "default=noprint_wrappers=1:nokey=1",
 		videoPath,
 	)
-	
+
 	output, err := cmd.Output()
 	if err != nil {
 		return 0, err
 	}
-	
+
 	durationStr := strings.TrimSpace(string(output))
 	duration, err := strconv.ParseFloat(durationStr, 64)
 	if err != nil {
 		return 0, err
 	}
-	
+
 	return duration, nil
 }
 
@@ -136,7 +136,7 @@ func (vp *VideoProcessor) GetVideoInfo(videoPath string) (width, height int, dur
 	if err != nil {
 		return 0, 0, 0, err
 	}
-	
+
 	// Get dimensions
 	cmd := exec.Command("ffprobe",
 		"-v", "error",
@@ -145,15 +145,15 @@ func (vp *VideoProcessor) GetVideoInfo(videoPath string) (width, height int, dur
 		"-of", "csv=s=x:p=0",
 		videoPath,
 	)
-	
+
 	output, err := cmd.Output()
 	if err != nil {
 		return 0, 0, duration, err
 	}
-	
+
 	dimensions := strings.TrimSpace(string(output))
 	_, err = fmt.Sscanf(dimensions, "%dx%d", &width, &height)
-	
+
 	return width, height, duration, err
 }
 

@@ -88,24 +88,24 @@ type ReadingStats struct {
 
 // AccessControl represents access control settings for an article
 type AccessControl struct {
-	IsPublic         bool     `json:"isPublic" bson:"isPublic"`                   // If false, requires authentication
-	RequiresLogin    bool     `json:"requiresLogin" bson:"requiresLogin"`         // Requires user to be logged in
-	AllowedUserIDs   []string `json:"allowedUserIds" bson:"allowedUserIds"`       // Specific users who can view
-	AllowedGroupIDs  []string `json:"allowedGroupIds" bson:"allowedGroupIds"`     // Groups that can view
-	AllowedRoles     []Role   `json:"allowedRoles" bson:"allowedRoles"`           // Roles that can view
-	DeniedUserIDs    []string `json:"deniedUserIds" bson:"deniedUserIds"`         // Explicitly denied users
-	RequiresPurchase bool     `json:"requiresPurchase" bson:"requiresPurchase"`   // Requires payment/subscription
-	IsPremium        bool     `json:"isPremium" bson:"isPremium"`                 // Premium content flag
+	IsPublic         bool     `json:"isPublic" bson:"isPublic"`                 // If false, requires authentication
+	RequiresLogin    bool     `json:"requiresLogin" bson:"requiresLogin"`       // Requires user to be logged in
+	AllowedUserIDs   []string `json:"allowedUserIds" bson:"allowedUserIds"`     // Specific users who can view
+	AllowedGroupIDs  []string `json:"allowedGroupIds" bson:"allowedGroupIds"`   // Groups that can view
+	AllowedRoles     []Role   `json:"allowedRoles" bson:"allowedRoles"`         // Roles that can view
+	DeniedUserIDs    []string `json:"deniedUserIds" bson:"deniedUserIds"`       // Explicitly denied users
+	RequiresPurchase bool     `json:"requiresPurchase" bson:"requiresPurchase"` // Requires payment/subscription
+	IsPremium        bool     `json:"isPremium" bson:"isPremium"`               // Premium content flag
 }
 
 // CommentConfig represents comment configuration for an article
 type CommentConfig struct {
-	Enabled          bool   `json:"enabled" bson:"enabled"`                   // Comments enabled
-	RequireApproval  bool   `json:"requireApproval" bson:"requireApproval"`   // Require moderation
-	AllowAnonymous   bool   `json:"allowAnonymous" bson:"allowAnonymous"`     // Allow anonymous comments
-	AllowNested      bool   `json:"allowNested" bson:"allowNested"`           // Allow nested replies
-	MaxNestingLevel  int    `json:"maxNestingLevel" bson:"maxNestingLevel"`   // Max nesting level (default 3)
-	AutoCloseAfter   int    `json:"autoCloseAfter" bson:"autoCloseAfter"`     // Auto-close after N days (0 = never)
+	Enabled         bool `json:"enabled" bson:"enabled"`                 // Comments enabled
+	RequireApproval bool `json:"requireApproval" bson:"requireApproval"` // Require moderation
+	AllowAnonymous  bool `json:"allowAnonymous" bson:"allowAnonymous"`   // Allow anonymous comments
+	AllowNested     bool `json:"allowNested" bson:"allowNested"`         // Allow nested replies
+	MaxNestingLevel int  `json:"maxNestingLevel" bson:"maxNestingLevel"` // Max nesting level (default 3)
+	AutoCloseAfter  int  `json:"autoCloseAfter" bson:"autoCloseAfter"`   // Auto-close after N days (0 = never)
 }
 
 // Article represents the main article document
@@ -145,22 +145,22 @@ type Article struct {
 	ViewCount     int                    `json:"viewCount" bson:"viewCount"`
 	ReadingStats  *ReadingStats          `json:"readingStats,omitempty" bson:"readingStats,omitempty"`
 	AccessControl AccessControl          `json:"accessControl" bson:"accessControl"` // Access control settings
-	
+
 	// Version management
-	CurrentVersion  int       `json:"currentVersion" bson:"currentVersion"` // Current version number
-	
+	CurrentVersion int `json:"currentVersion" bson:"currentVersion"` // Current version number
+
 	// Related articles
 	RelatedArticles []primitive.ObjectID `json:"relatedArticles,omitempty" bson:"relatedArticles,omitempty"`
-	
+
 	// Poll/Survey
-	HasPoll bool                `json:"hasPoll" bson:"hasPoll"` // Indicates if article has a poll
+	HasPoll bool                `json:"hasPoll" bson:"hasPoll"`                   // Indicates if article has a poll
 	PollID  *primitive.ObjectID `json:"pollId,omitempty" bson:"pollId,omitempty"` // Reference to poll
 
 	// Type-specific fields
 	// Video
-	VideoURL      string `json:"videoUrl,omitempty" bson:"videoUrl,omitempty"`
-	Duration      int    `json:"duration,omitempty" bson:"duration,omitempty"` // in seconds
-	Thumbnail     string `json:"thumbnail,omitempty" bson:"thumbnail,omitempty"`
+	VideoURL  string `json:"videoUrl,omitempty" bson:"videoUrl,omitempty"`
+	Duration  int    `json:"duration,omitempty" bson:"duration,omitempty"` // in seconds
+	Thumbnail string `json:"thumbnail,omitempty" bson:"thumbnail,omitempty"`
 
 	// Photo Gallery
 	Images        []GalleryImage `json:"images,omitempty" bson:"images,omitempty"`

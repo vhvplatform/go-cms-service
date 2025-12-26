@@ -31,8 +31,8 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Content  string              `json:"content"`
-		ParentID *string             `json:"parentId,omitempty"`
+		Content  string  `json:"content"`
+		ParentID *string `json:"parentId,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid request body")

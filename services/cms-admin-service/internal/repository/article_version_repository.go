@@ -27,7 +27,7 @@ func NewArticleVersionRepository(db *mongo.Database) *ArticleVersionRepository {
 func (r *ArticleVersionRepository) Create(ctx context.Context, version *model.ArticleVersion) error {
 	version.ID = primitive.NewObjectID()
 	version.CreatedAt = time.Now()
-	
+
 	_, err := r.collection.InsertOne(ctx, version)
 	return err
 }
@@ -36,18 +36,18 @@ func (r *ArticleVersionRepository) Create(ctx context.Context, version *model.Ar
 func (r *ArticleVersionRepository) FindByArticleID(ctx context.Context, articleID primitive.ObjectID) ([]*model.ArticleVersion, error) {
 	filter := bson.M{"articleId": articleID}
 	opts := options.Find().SetSort(bson.D{{Key: "versionNum", Value: -1}})
-	
+
 	cursor, err := r.collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var versions []*model.ArticleVersion
 	if err := cursor.All(ctx, &versions); err != nil {
 		return nil, err
 	}
-	
+
 	return versions, nil
 }
 
@@ -71,7 +71,7 @@ func (r *ArticleVersionRepository) FindByVersionNumber(ctx context.Context, arti
 		"articleId":  articleID,
 		"versionNum": versionNum,
 	}
-	
+
 	err := r.collection.FindOne(ctx, filter).Decode(&version)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -86,7 +86,7 @@ func (r *ArticleVersionRepository) FindByVersionNumber(ctx context.Context, arti
 func (r *ArticleVersionRepository) GetLatestVersionNumber(ctx context.Context, articleID primitive.ObjectID) (int, error) {
 	filter := bson.M{"articleId": articleID}
 	opts := options.FindOne().SetSort(bson.D{{Key: "versionNum", Value: -1}})
-	
+
 	var version model.ArticleVersion
 	err := r.collection.FindOne(ctx, filter, opts).Decode(&version)
 	if err != nil {
@@ -95,7 +95,7 @@ func (r *ArticleVersionRepository) GetLatestVersionNumber(ctx context.Context, a
 		}
 		return 0, err
 	}
-	
+
 	return version.VersionNum, nil
 }
 

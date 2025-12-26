@@ -71,13 +71,13 @@ func (h *ArticleHandler) GetArticle(w http.ResponseWriter, r *http.Request) {
 // ListArticles handles GET /api/v1/articles
 func (h *ArticleHandler) ListArticles(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	
+
 	// Parse pagination parameters
 	page, _ := strconv.Atoi(query.Get("page"))
 	if page < 1 {
 		page = 1
 	}
-	
+
 	limit, _ := strconv.Atoi(query.Get("limit"))
 	if limit < 1 || limit > 100 {
 		limit = 20
@@ -85,21 +85,21 @@ func (h *ArticleHandler) ListArticles(w http.ResponseWriter, r *http.Request) {
 
 	// Build filter
 	filter := make(map[string]interface{})
-	
+
 	if categoryID := query.Get("categoryId"); categoryID != "" {
 		if id, err := primitive.ObjectIDFromHex(categoryID); err == nil {
 			filter["categoryId"] = id
 		}
 	}
-	
+
 	if articleType := query.Get("articleType"); articleType != "" {
 		filter["articleType"] = model.ArticleType(articleType)
 	}
-	
+
 	if status := query.Get("status"); status != "" {
 		filter["status"] = model.ArticleStatus(status)
 	}
-	
+
 	if q := query.Get("q"); q != "" {
 		filter["q"] = q
 	}
@@ -249,17 +249,17 @@ func (h *ArticleHandler) GetArticleStats(w http.ResponseWriter, r *http.Request)
 	}
 
 	query := r.URL.Query()
-	
+
 	// Parse date range (default to last 30 days)
 	endDate := time.Now()
 	startDate := endDate.AddDate(0, 0, -30)
-	
+
 	if start := query.Get("startDate"); start != "" {
 		if t, err := time.Parse("2006-01-02", start); err == nil {
 			startDate = t
 		}
 	}
-	
+
 	if end := query.Get("endDate"); end != "" {
 		if t, err := time.Parse("2006-01-02", end); err == nil {
 			endDate = t
@@ -279,7 +279,7 @@ func (h *ArticleHandler) GetArticleStats(w http.ResponseWriter, r *http.Request)
 func (h *ArticleHandler) SearchArticles(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	q := query.Get("q")
-	
+
 	if q == "" {
 		respondError(w, http.StatusBadRequest, "Search query is required")
 		return
@@ -289,7 +289,7 @@ func (h *ArticleHandler) SearchArticles(w http.ResponseWriter, r *http.Request) 
 	if page < 1 {
 		page = 1
 	}
-	
+
 	limit, _ := strconv.Atoi(query.Get("limit"))
 	if limit < 1 || limit > 100 {
 		limit = 20
@@ -371,8 +371,8 @@ func (h *ArticleHandler) AddRejectionNote(w http.ResponseWriter, r *http.Request
 	}
 
 	var req struct {
-		Note     string              `json:"note"`
-		ParentID *string             `json:"parentId,omitempty"`
+		Note     string  `json:"note"`
+		ParentID *string `json:"parentId,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid request body")

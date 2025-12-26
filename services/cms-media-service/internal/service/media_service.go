@@ -56,31 +56,31 @@ func (s *MediaService) UploadFile(
 ) (*model.MediaFile, error) {
 	// Validate file type and size
 	fileType := s.determineFileType(fileHeader.Header.Get("Content-Type"))
-	
+
 	// Check file type config
 	config, err := s.repo.GetFileTypeConfig(ctx, tenantID, fileType)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if !config.Enabled {
 		return nil, fmt.Errorf("file type %s is not allowed", fileType)
 	}
-	
+
 	if fileHeader.Size > config.MaxFileSize {
 		return nil, fmt.Errorf("file size %d exceeds maximum allowed size %d", fileHeader.Size, config.MaxFileSize)
 	}
-	
+
 	// Generate unique filename
 	filename := s.generateFilename(fileHeader.Filename)
-	
+
 	// Create directory structure
 	yearMonth := time.Now().Format("2006/01")
 	targetDir := filepath.Join(s.uploadDir, string(fileType), yearMonth)
 	if err := os.MkdirAll(targetDir, 0755); err != nil {
 		return nil, err
 	}
-	
+
 	// Save original file
 	originalPath := filepath.Join(targetDir, filename)
 	outFile, err := os.Create(originalPath)
@@ -88,42 +88,42 @@ func (s *MediaService) UploadFile(
 		return nil, err
 	}
 	defer outFile.Close()
-	
+
 	size, err := io.Copy(outFile, file)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Create media file record
 	mediaFile := &model.MediaFile{
-		TenantID:     tenantID,
-		FileName:     filename,
-		OriginalName: fileHeader.Filename,
-		FilePath:     filepath.Join(string(fileType), yearMonth, filename),
-		FileType:     fileType,
-		MimeType:     fileHeader.Header.Get("Content-Type"),
-		FileSize:     size,
-		Folder:       folder,
-		UploadedBy:   userID,
-		URL:          fmt.Sprintf("%s/uploads/%s", s.baseURL, filepath.Join(string(fileType), yearMonth, filename)),
+		TenantID:         tenantID,
+		FileName:         filename,
+		OriginalName:     fileHeader.Filename,
+		FilePath:         filepath.Join(string(fileType), yearMonth, filename),
+		FileType:         fileType,
+		MimeType:         fileHeader.Header.Get("Content-Type"),
+		FileSize:         size,
+		Folder:           folder,
+		UploadedBy:       userID,
+		URL:              fmt.Sprintf("%s/uploads/%s", s.baseURL, filepath.Join(string(fileType), yearMonth, filename)),
 		ProcessingStatus: "processing",
 	}
-	
+
 	// Create record first
 	if err := s.repo.CreateFile(ctx, mediaFile); err != nil {
 		os.Remove(originalPath)
 		return nil, err
 	}
-	
+
 	// Process file based on type
 	go s.processFile(context.Background(), mediaFile, originalPath)
-	
+
 	// Log upload
 	s.logUpload(ctx, tenantID, mediaFile.ID, userID, fileHeader.Filename, fileType, size, "upload", ipAddress, userAgent)
-	
+
 	// Update tenant storage
 	s.repo.UpdateTenantStorage(ctx, tenantID, size, fileType, false)
-	
+
 	return mediaFile, nil
 }
 
@@ -133,7 +133,7 @@ func (s *MediaService) processFile(ctx context.Context, mediaFile *model.MediaFi
 		// Update processing status
 		s.repo.UpdateFile(ctx, mediaFile)
 	}()
-	
+
 	switch mediaFile.FileType {
 	case model.FileTypeImage:
 		s.processImage(ctx, mediaFile, originalPath)
@@ -142,7 +142,7 @@ func (s *MediaService) processFile(ctx context.Context, mediaFile *model.MediaFi
 	case model.FileTypeDocument, model.FileTypePDF:
 		s.processDocument(ctx, mediaFile, originalPath)
 	}
-	
+
 	mediaFile.ProcessingStatus = "completed"
 }
 
@@ -150,20 +150,20 @@ func (s *MediaService) processFile(ctx context.Context, mediaFile *model.MediaFi
 func (s *MediaService) processImage(ctx context.Context, mediaFile *model.MediaFile, originalPath string) {
 	// Compress image
 	compressedPath := strings.Replace(originalPath, filepath.Ext(originalPath), "_compressed"+filepath.Ext(originalPath), 1)
-	
+
 	compressedSize, err := s.imageProcessor.CompressImage(originalPath, compressedPath)
 	if err != nil {
 		mediaFile.ProcessingError = err.Error()
 		return
 	}
-	
+
 	// Get dimensions
 	width, height, _ := s.imageProcessor.GetImageDimensions(compressedPath)
-	
+
 	mediaFile.CompressedSize = compressedSize
 	mediaFile.Width = width
 	mediaFile.Height = height
-	
+
 	// Replace original with compressed if smaller
 	if compressedSize < mediaFile.FileSize {
 		os.Rename(compressedPath, originalPath)
@@ -181,11 +181,11 @@ func (s *MediaService) processVideo(ctx context.Context, mediaFile *model.MediaF
 		mediaFile.ProcessingError = err.Error()
 		return
 	}
-	
+
 	mediaFile.Width = width
 	mediaFile.Height = height
 	mediaFile.Duration = duration
-	
+
 	// Convert to HLS
 	baseName := strings.TrimSuffix(mediaFile.FileName, filepath.Ext(mediaFile.FileName))
 	m3u8Path, resolutions, err := s.videoProcessor.ConvertToHLS(originalPath, baseName)
@@ -193,9 +193,9 @@ func (s *MediaService) processVideo(ctx context.Context, mediaFile *model.MediaF
 		mediaFile.ProcessingError = err.Error()
 		return
 	}
-	
+
 	mediaFile.M3U8Path = m3u8Path
-	
+
 	// Convert resolutions to model format
 	for _, res := range resolutions {
 		mediaFile.VideoFormats = append(mediaFile.VideoFormats, model.VideoFormat{
@@ -204,7 +204,7 @@ func (s *MediaService) processVideo(ctx context.Context, mediaFile *model.MediaF
 			Bitrate:    0, // TODO: parse from res.Bitrate
 		})
 	}
-	
+
 	// Extract thumbnail
 	thumbnailPath := strings.Replace(originalPath, filepath.Ext(originalPath), "_thumb.jpg", 1)
 	if err := s.videoProcessor.ExtractThumbnail(originalPath, thumbnailPath, 1); err == nil {
@@ -216,12 +216,12 @@ func (s *MediaService) processVideo(ctx context.Context, mediaFile *model.MediaF
 // processDocument extracts thumbnail from document
 func (s *MediaService) processDocument(ctx context.Context, mediaFile *model.MediaFile, originalPath string) {
 	thumbnailPath := strings.Replace(originalPath, filepath.Ext(originalPath), "_thumb.jpg", 1)
-	
+
 	if err := s.documentProcessor.ExtractThumbnailByType(originalPath, thumbnailPath); err == nil {
 		relPath := strings.TrimPrefix(thumbnailPath, s.uploadDir)
 		mediaFile.Thumbnail = fmt.Sprintf("%s/uploads%s", s.baseURL, relPath)
 	}
-	
+
 	// Get page count for PDFs
 	if mediaFile.FileType == model.FileTypePDF {
 		if pageCount, err := s.documentProcessor.GetPDFPageCount(originalPath); err == nil {
@@ -293,28 +293,28 @@ func (s *MediaService) DeleteFile(ctx context.Context, id primitive.ObjectID, us
 	if err != nil {
 		return err
 	}
-	
+
 	// Check permissions
 	canDelete, err := s.repo.CheckPermission(ctx, file.TenantID, file.Folder, userID, role, "delete")
 	if err != nil || !canDelete {
 		return fmt.Errorf("insufficient permissions to delete file")
 	}
-	
+
 	// Delete file
 	if err := s.repo.DeleteFile(ctx, id); err != nil {
 		return err
 	}
-	
+
 	// Update storage
 	s.repo.UpdateTenantStorage(ctx, file.TenantID, file.FileSize, file.FileType, true)
-	
+
 	// Log deletion
 	s.logUpload(context.Background(), file.TenantID, file.ID, userID, file.FileName, file.FileType, file.FileSize, "delete", "", "")
-	
+
 	// Delete physical file
 	fullPath := filepath.Join(s.uploadDir, file.FilePath)
 	os.Remove(fullPath)
-	
+
 	return nil
 }
 

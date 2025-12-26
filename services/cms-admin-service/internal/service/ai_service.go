@@ -34,12 +34,12 @@ func (s *AIService) CheckSpelling(ctx context.Context, tenantID, userID, text st
 	if err != nil || config == nil || !config.SpellCheckEnabled {
 		return nil, fmt.Errorf("spell check not enabled for tenant")
 	}
-	
+
 	startTime := time.Now()
-	
+
 	var result *model.SpellCheckResult
 	var opErr error
-	
+
 	switch config.SpellCheckProvider {
 	case "openai":
 		result, opErr = s.spellCheckOpenAI(ctx, config, text)
@@ -48,25 +48,25 @@ func (s *AIService) CheckSpelling(ctx context.Context, tenantID, userID, text st
 	default:
 		opErr = fmt.Errorf("unsupported spell check provider: %s", config.SpellCheckProvider)
 	}
-	
+
 	duration := time.Since(startTime).Milliseconds()
-	
+
 	// Log operation
 	log := &model.AIOperationLog{
-		TenantID:   tenantID,
-		UserID:     userID,
-		Operation:  "spell_check",
-		Provider:   config.SpellCheckProvider,
-		InputText:  text,
-		Success:    opErr == nil,
-		Duration:   duration,
-		CreatedAt:  time.Now(),
+		TenantID:  tenantID,
+		UserID:    userID,
+		Operation: "spell_check",
+		Provider:  config.SpellCheckProvider,
+		InputText: text,
+		Success:   opErr == nil,
+		Duration:  duration,
+		CreatedAt: time.Now(),
 	}
 	if opErr != nil {
 		log.Error = opErr.Error()
 	}
 	s.logRepo.Create(ctx, log)
-	
+
 	return result, opErr
 }
 
@@ -76,12 +76,12 @@ func (s *AIService) Translate(ctx context.Context, tenantID, userID, text, targe
 	if err != nil || config == nil || !config.TranslationEnabled {
 		return nil, fmt.Errorf("translation not enabled for tenant")
 	}
-	
+
 	startTime := time.Now()
-	
+
 	var result *model.TranslationResult
 	var opErr error
-	
+
 	switch config.TranslationProvider {
 	case "openai":
 		result, opErr = s.translateOpenAI(ctx, config, text, targetLang)
@@ -92,9 +92,9 @@ func (s *AIService) Translate(ctx context.Context, tenantID, userID, text, targe
 	default:
 		opErr = fmt.Errorf("unsupported translation provider: %s", config.TranslationProvider)
 	}
-	
+
 	duration := time.Since(startTime).Milliseconds()
-	
+
 	// Log operation
 	log := &model.AIOperationLog{
 		TenantID:   tenantID,
@@ -115,7 +115,7 @@ func (s *AIService) Translate(ctx context.Context, tenantID, userID, text, targe
 		log.Error = opErr.Error()
 	}
 	s.logRepo.Create(ctx, log)
-	
+
 	return result, opErr
 }
 
@@ -125,12 +125,12 @@ func (s *AIService) ImproveContent(ctx context.Context, tenantID, userID, articl
 	if err != nil || config == nil || !config.ContentEditEnabled {
 		return nil, fmt.Errorf("content editing not enabled for tenant")
 	}
-	
+
 	startTime := time.Now()
-	
+
 	var result *model.ContentEditSuggestion
 	var opErr error
-	
+
 	switch config.AIProvider {
 	case "openai":
 		result, opErr = s.improveContentOpenAI(ctx, config, content)
@@ -139,9 +139,9 @@ func (s *AIService) ImproveContent(ctx context.Context, tenantID, userID, articl
 	default:
 		opErr = fmt.Errorf("unsupported AI provider: %s", config.AIProvider)
 	}
-	
+
 	duration := time.Since(startTime).Milliseconds()
-	
+
 	// Log operation
 	log := &model.AIOperationLog{
 		TenantID:  tenantID,
@@ -161,7 +161,7 @@ func (s *AIService) ImproveContent(ctx context.Context, tenantID, userID, articl
 		log.Error = opErr.Error()
 	}
 	s.logRepo.Create(ctx, log)
-	
+
 	return result, opErr
 }
 
@@ -171,12 +171,12 @@ func (s *AIService) DetectViolation(ctx context.Context, tenantID, userID, conte
 	if err != nil || config == nil || !config.ViolationDetection {
 		return nil, fmt.Errorf("violation detection not enabled for tenant")
 	}
-	
+
 	startTime := time.Now()
-	
+
 	var result *model.ViolationDetectionResult
 	var opErr error
-	
+
 	switch config.AIProvider {
 	case "openai":
 		result, opErr = s.detectViolationOpenAI(ctx, config, content)
@@ -185,9 +185,9 @@ func (s *AIService) DetectViolation(ctx context.Context, tenantID, userID, conte
 	default:
 		opErr = fmt.Errorf("unsupported AI provider: %s", config.AIProvider)
 	}
-	
+
 	duration := time.Since(startTime).Milliseconds()
-	
+
 	// Log operation
 	log := &model.AIOperationLog{
 		TenantID:  tenantID,
@@ -203,7 +203,7 @@ func (s *AIService) DetectViolation(ctx context.Context, tenantID, userID, conte
 		log.Error = opErr.Error()
 	}
 	s.logRepo.Create(ctx, log)
-	
+
 	return result, opErr
 }
 
@@ -216,9 +216,9 @@ func (s *AIService) spellCheckOpenAI(ctx context.Context, config *model.AIConfig
 	if len(sanitizedText) > 5000 {
 		sanitizedText = sanitizedText[:5000] // Limit length
 	}
-	
+
 	_ = "Check the following text for spelling and grammar errors. Return a JSON array of corrections."
-	
+
 	// Mock response for now - in production, integrate with actual OpenAI API
 	return &model.SpellCheckResult{
 		Original:    text,
@@ -246,7 +246,7 @@ func (s *AIService) translateOpenAI(ctx context.Context, config *model.AIConfigu
 		MaxTokens   int     `json:"max_tokens,omitempty"`
 		Temperature float64 `json:"temperature,omitempty"`
 	}
-	
+
 	req := openAIRequest{
 		Model: config.Model,
 		Messages: []struct {
@@ -259,20 +259,20 @@ func (s *AIService) translateOpenAI(ctx context.Context, config *model.AIConfigu
 		MaxTokens:   config.MaxTokens,
 		Temperature: config.Temperature,
 	}
-	
+
 	jsonData, _ := json.Marshal(req)
 	httpReq, _ := http.NewRequestWithContext(ctx, "POST", config.APIEndpoint, bytes.NewBuffer(jsonData))
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+config.APIKey)
-	
+
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	
+
 	body, _ := io.ReadAll(resp.Body)
-	
+
 	// Parse OpenAI response
 	var openAIResp struct {
 		Choices []struct {
@@ -281,15 +281,15 @@ func (s *AIService) translateOpenAI(ctx context.Context, config *model.AIConfigu
 			} `json:"message"`
 		} `json:"choices"`
 	}
-	
+
 	if err := json.Unmarshal(body, &openAIResp); err != nil {
 		return nil, err
 	}
-	
+
 	if len(openAIResp.Choices) == 0 {
 		return nil, fmt.Errorf("no translation returned")
 	}
-	
+
 	return &model.TranslationResult{
 		SourceText:     text,
 		TranslatedText: openAIResp.Choices[0].Message.Content,

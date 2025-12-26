@@ -46,10 +46,10 @@ func GetEnvDuration(key string, defaultValue time.Duration) time.Duration {
 
 // Config holds common application configuration
 type Config struct {
-	ServerPort    string
-	LogLevel      string
-	Environment   string
-	ServiceName   string
+	ServerPort  string
+	LogLevel    string
+	Environment string
+	ServiceName string
 }
 
 // NewConfig creates a new Config with defaults

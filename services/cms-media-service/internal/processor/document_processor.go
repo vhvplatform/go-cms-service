@@ -31,7 +31,7 @@ func (dp *DocumentProcessor) ExtractPDFThumbnail(pdfPath, outputPath string) err
 		"-quality", "85",
 		outputPath,
 	}
-	
+
 	cmd := exec.Command("convert", args...)
 	return cmd.Run()
 }
@@ -42,7 +42,7 @@ func (dp *DocumentProcessor) ExtractDocxThumbnail(docxPath, outputPath string) e
 	tmpDir := filepath.Join(dp.outputDir, "tmp")
 	os.MkdirAll(tmpDir, 0755)
 	defer os.RemoveAll(tmpDir)
-	
+
 	// Convert to PDF
 	cmd := exec.Command("libreoffice",
 		"--headless",
@@ -50,15 +50,15 @@ func (dp *DocumentProcessor) ExtractDocxThumbnail(docxPath, outputPath string) e
 		"--outdir", tmpDir,
 		docxPath,
 	)
-	
+
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("docx to pdf conversion failed: %w", err)
 	}
-	
+
 	// Find generated PDF
 	baseName := strings.TrimSuffix(filepath.Base(docxPath), filepath.Ext(docxPath))
 	pdfPath := filepath.Join(tmpDir, baseName+".pdf")
-	
+
 	// Extract thumbnail from PDF
 	return dp.ExtractPDFThumbnail(pdfPath, outputPath)
 }
@@ -69,7 +69,7 @@ func (dp *DocumentProcessor) ExtractPPTXThumbnail(pptxPath, outputPath string) e
 	tmpDir := filepath.Join(dp.outputDir, "tmp")
 	os.MkdirAll(tmpDir, 0755)
 	defer os.RemoveAll(tmpDir)
-	
+
 	// Convert to PDF
 	cmd := exec.Command("libreoffice",
 		"--headless",
@@ -77,15 +77,15 @@ func (dp *DocumentProcessor) ExtractPPTXThumbnail(pptxPath, outputPath string) e
 		"--outdir", tmpDir,
 		pptxPath,
 	)
-	
+
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("pptx to pdf conversion failed: %w", err)
 	}
-	
+
 	// Find generated PDF
 	baseName := strings.TrimSuffix(filepath.Base(pptxPath), filepath.Ext(pptxPath))
 	pdfPath := filepath.Join(tmpDir, baseName+".pdf")
-	
+
 	// Extract thumbnail from PDF
 	return dp.ExtractPDFThumbnail(pdfPath, outputPath)
 }
@@ -93,7 +93,7 @@ func (dp *DocumentProcessor) ExtractPPTXThumbnail(pptxPath, outputPath string) e
 // ExtractThumbnailByType extracts thumbnail based on file type
 func (dp *DocumentProcessor) ExtractThumbnailByType(filePath, outputPath string) error {
 	ext := strings.ToLower(filepath.Ext(filePath))
-	
+
 	switch ext {
 	case ".pdf":
 		return dp.ExtractPDFThumbnail(filePath, outputPath)
@@ -113,7 +113,7 @@ func (dp *DocumentProcessor) GetPDFPageCount(pdfPath string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	
+
 	// Parse output for "Pages:" line
 	lines := strings.Split(string(output), "\n")
 	for _, line := range lines {
@@ -125,6 +125,6 @@ func (dp *DocumentProcessor) GetPDFPageCount(pdfPath string) (int, error) {
 			}
 		}
 	}
-	
+
 	return 0, fmt.Errorf("could not determine page count")
 }

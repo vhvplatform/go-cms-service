@@ -29,12 +29,12 @@ func (p *ImageProcessor) CompressImage(inputPath, outputPath string) (int64, err
 	if _, err := exec.LookPath("convert"); err == nil {
 		return p.compressWithImageMagick(inputPath, outputPath)
 	}
-	
+
 	// Fallback to FFmpeg
 	if _, err := exec.LookPath("ffmpeg"); err == nil {
 		return p.compressWithFFmpeg(inputPath, outputPath)
 	}
-	
+
 	// No processor available, just copy the file
 	return p.copyFile(inputPath, outputPath)
 }
@@ -48,18 +48,18 @@ func (p *ImageProcessor) compressWithImageMagick(inputPath, outputPath string) (
 		"-strip", // Remove EXIF data
 		outputPath,
 	}
-	
+
 	cmd := exec.Command("convert", args...)
 	if err := cmd.Run(); err != nil {
 		return 0, fmt.Errorf("imagemagick conversion failed: %w", err)
 	}
-	
+
 	// Get output file size
 	info, err := os.Stat(outputPath)
 	if err != nil {
 		return 0, err
 	}
-	
+
 	return info.Size(), nil
 }
 
@@ -72,17 +72,17 @@ func (p *ImageProcessor) compressWithFFmpeg(inputPath, outputPath string) (int64
 		outputPath,
 		"-y",
 	}
-	
+
 	cmd := exec.Command("ffmpeg", args...)
 	if err := cmd.Run(); err != nil {
 		return 0, fmt.Errorf("ffmpeg conversion failed: %w", err)
 	}
-	
+
 	info, err := os.Stat(outputPath)
 	if err != nil {
 		return 0, err
 	}
-	
+
 	return info.Size(), nil
 }
 
@@ -92,11 +92,11 @@ func (p *ImageProcessor) copyFile(src, dst string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	
+
 	if err := os.WriteFile(dst, input, 0644); err != nil {
 		return 0, err
 	}
-	
+
 	return int64(len(input)), nil
 }
 
@@ -109,12 +109,12 @@ func (p *ImageProcessor) GetImageDimensions(imagePath string) (width, height int
 		"-of", "csv=s=x:p=0",
 		imagePath,
 	)
-	
+
 	output, err := cmd.Output()
 	if err != nil {
 		return 0, 0, err
 	}
-	
+
 	dimensions := strings.TrimSpace(string(output))
 	_, err = fmt.Sscanf(dimensions, "%dx%d", &width, &height)
 	return width, height, err

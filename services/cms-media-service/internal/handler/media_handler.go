@@ -30,14 +30,14 @@ func (h *MediaHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusBadRequest, "Failed to parse form")
 		return
 	}
-	
+
 	file, fileHeader, err := r.FormFile("file")
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "No file uploaded")
 		return
 	}
 	defer file.Close()
-	
+
 	// Get tenant ID from context/header
 	tenantIDStr := r.Header.Get("X-Tenant-ID")
 	tenantID, err := primitive.ObjectIDFromHex(tenantIDStr)
@@ -45,18 +45,18 @@ func (h *MediaHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusBadRequest, "Invalid tenant ID")
 		return
 	}
-	
+
 	// Get user info
 	userID := r.Header.Get("X-User-ID")
 	if userID == "" {
 		userID = "system"
 	}
-	
+
 	folder := r.FormValue("folder")
 	if folder == "" {
 		folder = "/"
 	}
-	
+
 	// Upload file
 	mediaFile, err := h.service.UploadFile(
 		r.Context(),
@@ -72,7 +72,7 @@ func (h *MediaHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	
+
 	respondJSON(w, http.StatusCreated, mediaFile)
 }
 
@@ -84,13 +84,13 @@ func (h *MediaHandler) GetFile(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusBadRequest, "Invalid file ID")
 		return
 	}
-	
+
 	file, err := h.service.GetFile(r.Context(), id)
 	if err != nil {
 		respondError(w, http.StatusNotFound, "File not found")
 		return
 	}
-	
+
 	respondJSON(w, http.StatusOK, file)
 }
 
@@ -102,35 +102,35 @@ func (h *MediaHandler) ListFiles(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusBadRequest, "Invalid tenant ID")
 		return
 	}
-	
+
 	folder := r.URL.Query().Get("folder")
 	if folder == "" {
 		folder = "/"
 	}
-	
+
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	if page < 1 {
 		page = 1
 	}
-	
+
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	if limit < 1 || limit > 100 {
 		limit = 20
 	}
-	
+
 	files, total, err := h.service.ListFiles(r.Context(), tenantID, folder, page, limit)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	
+
 	response := map[string]interface{}{
 		"files": files,
 		"total": total,
 		"page":  page,
 		"limit": limit,
 	}
-	
+
 	respondJSON(w, http.StatusOK, response)
 }
 
@@ -142,15 +142,15 @@ func (h *MediaHandler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusBadRequest, "Invalid file ID")
 		return
 	}
-	
+
 	userID := r.Header.Get("X-User-ID")
 	role := r.Header.Get("X-User-Role")
-	
+
 	if err := h.service.DeleteFile(r.Context(), id, userID, role); err != nil {
 		respondError(w, http.StatusForbidden, err.Error())
 		return
 	}
-	
+
 	respondJSON(w, http.StatusOK, map[string]string{"message": "File deleted successfully"})
 }
 
@@ -162,13 +162,13 @@ func (h *MediaHandler) GetStorageUsage(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusBadRequest, "Invalid tenant ID")
 		return
 	}
-	
+
 	usage, err := h.service.GetStorageUsage(r.Context(), tenantID)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	
+
 	respondJSON(w, http.StatusOK, usage)
 }
 
@@ -179,12 +179,12 @@ func (h *MediaHandler) CreateFolder(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
-	
+
 	if err := h.service.CreateFolder(r.Context(), &folder); err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	
+
 	respondJSON(w, http.StatusCreated, folder)
 }
 
@@ -196,13 +196,13 @@ func (h *MediaHandler) ListFolders(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusBadRequest, "Invalid tenant ID")
 		return
 	}
-	
+
 	folders, err := h.service.ListFolders(r.Context(), tenantID)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	
+
 	respondJSON(w, http.StatusOK, folders)
 }
 
