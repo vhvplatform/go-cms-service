@@ -18,6 +18,11 @@ This repository contains a production-ready article management service with supp
 - ✅ **Editorial Workflow**: Draft → Review → Published → Archived
 - ✅ **Access Control**: Public, login-required, role-based, premium content
 - ✅ **Statistics & Reporting**: Comprehensive analytics and metrics
+- ✅ **Action Logs**: Complete audit trail of all article operations
+- ✅ **Version Management**: Track and restore previous versions of articles
+- ✅ **Rejection Notes**: Conversation threads for article feedback
+- ✅ **Social Media Sharing**: One-click sharing to Facebook, Twitter, LinkedIn
+- ✅ **Input Validation**: Comprehensive validation for all API endpoints
 
 ## Quick Start
 

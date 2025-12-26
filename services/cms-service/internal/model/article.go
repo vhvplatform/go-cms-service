@@ -137,6 +137,13 @@ type Article struct {
 	
 	// Version management
 	CurrentVersion  int       `json:"currentVersion" bson:"currentVersion"` // Current version number
+	
+	// Related articles
+	RelatedArticles []primitive.ObjectID `json:"relatedArticles,omitempty" bson:"relatedArticles,omitempty"`
+	
+	// Poll/Survey
+	HasPoll bool                `json:"hasPoll" bson:"hasPoll"` // Indicates if article has a poll
+	PollID  *primitive.ObjectID `json:"pollId,omitempty" bson:"pollId,omitempty"` // Reference to poll
 
 	// Type-specific fields
 	// Video

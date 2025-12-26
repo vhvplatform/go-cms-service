@@ -284,3 +284,137 @@ func (r *ArticleRepository) CreateIndexes(ctx context.Context) error {
 	_, err := r.collection.Indexes().CreateMany(ctx, indexes)
 	return err
 }
+
+// FindByTag finds articles with a specific tag
+func (r *ArticleRepository) FindByTag(ctx context.Context, tag string, page, limit int) ([]*model.Article, int64, error) {
+	filter := bson.M{
+		"tags":   tag,
+		"status": model.ArticleStatusPublished,
+	}
+	
+	// Count total
+	total, err := r.collection.CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+	
+	// Find with pagination
+	opts := options.Find().
+		SetSort(bson.D{{Key: "publishAt", Value: -1}}).
+		SetSkip(int64((page - 1) * limit)).
+		SetLimit(int64(limit))
+	
+	cursor, err := r.collection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer cursor.Close(ctx)
+	
+	var articles []*model.Article
+	if err := cursor.All(ctx, &articles); err != nil {
+		return nil, 0, err
+	}
+	
+	return articles, total, nil
+}
+
+// FindByAuthor finds articles by author ID
+func (r *ArticleRepository) FindByAuthor(ctx context.Context, authorID string, page, limit int) ([]*model.Article, int64, error) {
+	filter := bson.M{
+		"author.id": authorID,
+		"status":    model.ArticleStatusPublished,
+	}
+	
+	// Count total
+	total, err := r.collection.CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+	
+	// Find with pagination
+	opts := options.Find().
+		SetSort(bson.D{{Key: "publishAt", Value: -1}}).
+		SetSkip(int64((page - 1) * limit)).
+		SetLimit(int64(limit))
+	
+	cursor, err := r.collection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer cursor.Close(ctx)
+	
+	var articles []*model.Article
+	if err := cursor.All(ctx, &articles); err != nil {
+		return nil, 0, err
+	}
+	
+	return articles, total, nil
+}
+
+// FindRelatedArticles finds related articles by IDs
+func (r *ArticleRepository) FindRelatedArticles(ctx context.Context, articleIDs []primitive.ObjectID) ([]*model.Article, error) {
+	if len(articleIDs) == 0 {
+		return []*model.Article{}, nil
+	}
+	
+	filter := bson.M{
+		"_id":    bson.M{"$in": articleIDs},
+		"status": model.ArticleStatusPublished,
+	}
+	
+	cursor, err := r.collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+	
+	var articles []*model.Article
+	if err := cursor.All(ctx, &articles); err != nil {
+		return nil, err
+	}
+	
+	return articles, nil
+}
+
+// UpdateRelatedArticles updates related articles for an article
+func (r *ArticleRepository) UpdateRelatedArticles(ctx context.Context, id primitive.ObjectID, relatedIDs []primitive.ObjectID) error {
+	update := bson.M{
+		"$set": bson.M{
+			"relatedArticles": relatedIDs,
+			"updatedAt":       time.Now(),
+		},
+	}
+	
+	_, err := r.collection.UpdateOne(ctx, bson.M{"_id": id}, update)
+	return err
+}
+
+// FindSimilarArticlesByTags finds similar articles based on shared tags
+func (r *ArticleRepository) FindSimilarArticlesByTags(ctx context.Context, articleID primitive.ObjectID, tags []string, limit int) ([]*model.Article, error) {
+	if len(tags) == 0 {
+		return []*model.Article{}, nil
+	}
+	
+	filter := bson.M{
+		"_id":    bson.M{"$ne": articleID},
+		"tags":   bson.M{"$in": tags},
+		"status": model.ArticleStatusPublished,
+	}
+	
+	opts := options.Find().
+		SetSort(bson.D{{Key: "publishAt", Value: -1}}).
+		SetLimit(int64(limit))
+	
+	cursor, err := r.collection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+	
+	var articles []*model.Article
+	if err := cursor.All(ctx, &articles); err != nil {
+		return nil, err
+	}
+	
+	return articles, nil
+}

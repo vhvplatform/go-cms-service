@@ -613,3 +613,47 @@ func (s *ArticleService) GetUnresolvedRejectionCount(ctx context.Context, articl
 	}
 	return s.rejectionNoteRepo.CountUnresolvedByArticleID(ctx, articleID)
 }
+
+// FindByTag finds articles with a specific tag
+func (s *ArticleService) FindByTag(ctx context.Context, tag string, page, limit int) ([]*model.Article, int64, error) {
+	return s.repo.FindByTag(ctx, tag, page, limit)
+}
+
+// FindByAuthor finds articles by author ID
+func (s *ArticleService) FindByAuthor(ctx context.Context, authorID string, page, limit int) ([]*model.Article, int64, error) {
+	return s.repo.FindByAuthor(ctx, authorID, page, limit)
+}
+
+// GetRelatedArticles gets related articles for an article
+func (s *ArticleService) GetRelatedArticles(ctx context.Context, articleID primitive.ObjectID) ([]*model.Article, error) {
+	article, err := s.repo.FindByID(ctx, articleID)
+	if err != nil {
+		return nil, err
+	}
+	
+	// If manually assigned related articles exist, return them
+	if len(article.RelatedArticles) > 0 {
+		return s.repo.FindRelatedArticles(ctx, article.RelatedArticles)
+	}
+	
+	// Otherwise, find similar articles by tags
+	return s.repo.FindSimilarArticlesByTags(ctx, articleID, article.Tags, 5)
+}
+
+// UpdateRelatedArticles updates related articles for an article
+func (s *ArticleService) UpdateRelatedArticles(ctx context.Context, articleID primitive.ObjectID, relatedIDs []primitive.ObjectID, userID string, userRole model.Role) error {
+	// Only editors and moderators can update related articles
+	if userRole != model.RoleEditor && userRole != model.RoleModerator {
+		return fmt.Errorf("insufficient permissions: only editors and moderators can update related articles")
+	}
+	
+	// Validate that related articles exist
+	if len(relatedIDs) > 0 {
+		_, err := s.repo.FindRelatedArticles(ctx, relatedIDs)
+		if err != nil {
+			return fmt.Errorf("failed to validate related articles: %w", err)
+		}
+	}
+	
+	return s.repo.UpdateRelatedArticles(ctx, articleID, relatedIDs)
+}

@@ -24,6 +24,7 @@ func main() {
 	mongoURI := getEnv("MONGODB_URI", "mongodb://localhost:27017")
 	dbName := getEnv("MONGODB_DATABASE", "cms")
 	serverPort := getEnv("SERVER_PORT", "8080")
+	baseURL := getEnv("BASE_URL", "http://localhost:"+serverPort)
 	runMigrations := getEnv("RUN_MIGRATIONS", "true") == "true"
 
 	log.Println("Starting CMS Service...")
@@ -63,6 +64,7 @@ func main() {
 	actionLogRepo := repository.NewActionLogRepository(db)
 	versionRepo := repository.NewArticleVersionRepository(db)
 	rejectionNoteRepo := repository.NewRejectionNoteRepository(db)
+	commentRepo := repository.NewCommentRepository(db)
 
 	// Initialize view queue
 	viewQueue := worker.NewViewQueue(articleRepo, viewStatsRepo, 10000, 100, 5*time.Second)
@@ -72,10 +74,14 @@ func main() {
 	// Initialize services
 	articleService := service.NewArticleService(articleRepo, permissionRepo, viewStatsRepo, viewQueue, actionLogRepo, versionRepo, rejectionNoteRepo)
 	categoryService := service.NewCategoryService(categoryRepo)
+	commentService := service.NewCommentService(commentRepo)
+	rssService := service.NewRSSService(articleRepo, baseURL)
 
 	// Initialize handlers
 	articleHandler := handler.NewArticleHandler(articleService)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
+	commentHandler := handler.NewCommentHandler(commentService)
+	rssHandler := handler.NewRSSHandler(rssService)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware()
@@ -162,6 +168,102 @@ func main() {
 
 	// Statistics route
 	mux.Handle("/api/v1/statistics/articles/", authMiddleware.Authenticate(http.HandlerFunc(articleHandler.GetArticleStats)))
+
+	// RSS route (public)
+	mux.HandleFunc("/api/v1/rss", rssHandler.GetRSSFeed)
+
+	// Comment routes
+	mux.Handle("/api/v1/comments/pending", authMiddleware.Authenticate(http.HandlerFunc(commentHandler.GetPendingComments)))
+	
+	// User favorites route
+	mux.Handle("/api/v1/users/favorites", authMiddleware.Authenticate(http.HandlerFunc(commentHandler.GetUserFavorites)))
+
+	// Comment-specific routes with path-based routing
+	mux.Handle("/api/v1/comments/", authMiddleware.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if containsSegment(r.URL.Path, "replies") && r.Method == http.MethodGet {
+			commentHandler.GetCommentReplies(w, r)
+		} else if containsSegment(r.URL.Path, "moderate") && r.Method == http.MethodPost {
+			commentHandler.ModerateComment(w, r)
+		} else if containsSegment(r.URL.Path, "like") {
+			if r.Method == http.MethodPost {
+				commentHandler.LikeComment(w, r)
+			} else if r.Method == http.MethodDelete {
+				commentHandler.UnlikeComment(w, r)
+			}
+		} else if containsSegment(r.URL.Path, "report") && r.Method == http.MethodPost {
+			commentHandler.ReportComment(w, r)
+		} else {
+			http.Error(w, "Not found", http.StatusNotFound)
+		}
+	})))
+
+	// Article-specific comment and favorite routes
+	mux.Handle("/api/v1/articles/", authMiddleware.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Route based on path and method
+		if r.URL.Path == "/api/v1/articles/reorder" && r.Method == http.MethodPost {
+			articleHandler.ReorderArticles(w, r)
+			return
+		}
+
+		// Handle /comments endpoint
+		if containsSegment(r.URL.Path, "comments") {
+			if r.Method == http.MethodPost {
+				commentHandler.CreateComment(w, r)
+			} else if r.Method == http.MethodGet {
+				commentHandler.GetArticleComments(w, r)
+			}
+			return
+		}
+
+		// Handle /favorite endpoint
+		if containsSegment(r.URL.Path, "favorite") {
+			if r.Method == http.MethodPost {
+				commentHandler.AddFavorite(w, r)
+			} else if r.Method == http.MethodDelete {
+				commentHandler.RemoveFavorite(w, r)
+			}
+			return
+		}
+
+		// Extract article ID and handle article-specific routes
+		switch r.Method {
+		case http.MethodGet:
+			articleHandler.GetArticle(w, r)
+		case http.MethodPatch:
+			articleHandler.UpdateArticle(w, r)
+		case http.MethodDelete:
+			articleHandler.DeleteArticle(w, r)
+		case http.MethodPost:
+			// Check for /publish or /view endpoint
+			if containsSegment(r.URL.Path, "publish") {
+				articleHandler.PublishArticle(w, r)
+			} else if containsSegment(r.URL.Path, "view") {
+				articleHandler.ViewArticle(w, r)
+			} else if containsSegment(r.URL.Path, "reject") {
+				articleHandler.RejectArticle(w, r)
+			} else if containsSegment(r.URL.Path, "rejection-notes") {
+				if containsSegment(r.URL.Path, "resolve") {
+					articleHandler.ResolveRejectionNotes(w, r)
+				} else {
+					articleHandler.AddRejectionNote(w, r)
+				}
+			} else if containsSegment(r.URL.Path, "versions") {
+				if containsSegment(r.URL.Path, "restore") {
+					articleHandler.RestoreArticleVersion(w, r)
+				} else {
+					articleHandler.GetArticleVersions(w, r)
+				}
+			} else if containsSegment(r.URL.Path, "logs") {
+				articleHandler.GetActionLogs(w, r)
+			} else if containsSegment(r.URL.Path, "share") {
+				articleHandler.GetSocialShareURLs(w, r)
+			} else {
+				http.Error(w, "Not found", http.StatusNotFound)
+			}
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))
 
 	// Start scheduler
 	scheduler := worker.NewScheduler(articleService, 1*time.Minute)
