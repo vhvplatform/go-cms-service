@@ -8,14 +8,24 @@ This repository contains production-ready CMS microservices with support for mul
 
 ## Microservices
 
-### 1. CMS Service (Port 8080)
-Main content management service handling articles, categories, permissions, and workflows.
+### 1. CMS Admin Service (Port 8080)
+Main content management service handling articles, categories, permissions, workflows, version control, and AI features.
 
 ### 2. CMS Stats Service (Port 8081)
-Dedicated service for comments and statistics, isolated for better scalability and performance.
+Dedicated service for comments, likes, favorites, and statistics - isolated for better scalability and performance.
+
+### 3. CMS Frontend Service (Port 8082)
+Public-facing API with Redis caching and service composition for optimal end-user performance.
+
+### 4. CMS Media Service (Port 8083)
+Advanced media processing including image compression, video HLS encoding, document thumbnails, and storage management.
+
+### 5. CMS Crawler Service (Port 8084)
+Automated content collection from external sources with anti-crawler bypass, duplicate detection, and similarity grouping.
 
 ## Features
 
+### Core Content Management
 - ✅ **Multi-Type Articles**: 14+ article types (News, Video, Gallery, Legal, etc.)
 - ✅ **Multi-Tenancy**: Tenant-based article type configuration
 - ✅ **Advanced Permissions**: Role-based access + permission groups by categories
@@ -26,11 +36,41 @@ Dedicated service for comments and statistics, isolated for better scalability a
 - ✅ **Editorial Workflow**: Draft → Review → Published → Archived
 - ✅ **Access Control**: Public, login-required, role-based, premium content
 - ✅ **Statistics & Reporting**: Comprehensive analytics and metrics
+
+### Advanced Features
 - ✅ **Action Logs**: Complete audit trail of all article operations
 - ✅ **Version Management**: Track and restore previous versions of articles
 - ✅ **Rejection Notes**: Conversation threads for article feedback
 - ✅ **Social Media Sharing**: One-click sharing to Facebook, Twitter, LinkedIn
 - ✅ **Input Validation**: Comprehensive validation for all API endpoints
+- ✅ **Comment System**: Nested comments (3 levels) with moderation and rate limiting
+- ✅ **Polls & Surveys**: Configurable polls with vote tracking
+- ✅ **Related Articles**: Manual and automatic article linking
+- ✅ **RSS Feed**: RSS 2.0 generation with media enclosures
+
+### AI & Content Intelligence
+- ✅ **Sensitive Keyword Detection**: Pattern-based content moderation
+- ✅ **AI Spell Check**: Multi-provider spell and grammar checking
+- ✅ **AI Translation**: Translate to multiple languages
+- ✅ **Content Improvement**: AI-powered content suggestions
+- ✅ **Violation Detection**: Automatic policy violation detection
+
+### Media Processing
+- ✅ **Image Optimization**: Automatic compression and thumbnail generation
+- ✅ **Video HLS Encoding**: Adaptive bitrate streaming (360p, 720p, 1080p)
+- ✅ **Document Thumbnails**: PDF, DOCX, PPTX thumbnail extraction
+- ✅ **Storage Management**: Per-tenant quota tracking and usage stats
+- ✅ **Auto Image Download**: Download external images to local storage
+
+### Content Automation
+- ✅ **Web Crawler**: Automated article collection from external sources
+- ✅ **Campaign Management**: Scheduled crawling with cron expressions
+- ✅ **Dynamic Extraction**: CSS selector and XPath-based extraction
+- ✅ **Anti-Crawler Bypass**: User agents, proxies, delays, custom headers
+- ✅ **Duplicate Detection**: Content hash-based deduplication
+- ✅ **Similar Grouping**: Auto-group similar articles from different sources
+- ✅ **Auto-Approval**: Configure sources for automatic approval
+- ✅ **Post-Review**: Review workflow for approved crawled content
 
 ## Quick Start
 

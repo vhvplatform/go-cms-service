@@ -154,6 +154,9 @@ services:
       - UPLOAD_DIR=/app/uploads
       - BASE_URL=http://localhost:8083
       - LOG_LEVEL=info
+      - MAX_IMAGE_SIZE=10485760
+      - MAX_VIDEO_SIZE=524288000
+      - MAX_DOCUMENT_SIZE=20971520
     depends_on:
       mongodb:
         condition: service_healthy
@@ -163,6 +166,33 @@ services:
       - cms-network
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8083/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # CMS Crawler Service (Automated Content Collection)
+  cms-crawler-service:
+    build:
+      context: .
+      dockerfile: services/cms-crawler-service/Dockerfile
+    container_name: cms-crawler-service
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      - SERVER_PORT=8084
+      - MONGODB_URI=mongodb://mongodb:27017
+      - MONGODB_DATABASE=cms_crawler
+      - LOG_LEVEL=info
+      - CLEANUP_SCHEDULE=@daily
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - cms-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8084/health"]
       interval: 30s
       timeout: 10s
       retries: 3
