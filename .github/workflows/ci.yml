@@ -26,9 +26,11 @@ jobs:
           cache: true
 
       - name: Run go vet
+        working-directory: ./server
         run: go vet ./...
 
       - name: Check formatting
+        working-directory: ./server
         run: |
           if [ -n "$(gofmt -l .)" ]; then
             echo "Code is not formatted:"
@@ -41,6 +43,7 @@ jobs:
           curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.55.2
 
       - name: Run golangci-lint
+        working-directory: ./server
         run: golangci-lint run ./...
 
   test:
@@ -80,9 +83,11 @@ jobs:
           cache: true
 
       - name: Download dependencies
+        working-directory: ./server
         run: go mod download
 
       - name: Run tests
+        working-directory: ./server
         run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
         env:
           MONGODB_URI: mongodb://localhost:27017
@@ -91,7 +96,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
-          file: ./coverage.out
+          file: ./server/coverage.out
           flags: unittests
           name: codecov-umbrella
 
@@ -114,6 +119,7 @@ jobs:
           cache: true
 
       - name: Build ${{ matrix.service }}
+        working-directory: ./server
         run: |
           CGO_ENABLED=0 go build -v -o bin/${{ matrix.service }} ./services/${{ matrix.service }}/cmd
 
@@ -121,7 +127,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.service }}
-          path: bin/${{ matrix.service }}
+          path: server/bin/${{ matrix.service }}
           retention-days: 7
 
   docker:
@@ -148,6 +154,7 @@ jobs:
 
       - name: Build and push Docker images
         if: github.ref == 'refs/heads/main'
+        working-directory: ./server
         run: |
           docker compose build
           docker compose push
