@@ -1,73 +1,124 @@
 # Go CMS Service
 
-A comprehensive Content Management System built with microservices architecture using Go and MongoDB, with React.js frontend and Flutter mobile app.
+A comprehensive Content Management System built with microservices architecture using Go and MongoDB.
 
 ## Overview
 
-This repository contains a complete CMS platform with:
-- **Backend microservices** built with Go
-- **Frontend web application** built with React.js
-- **Mobile application** built with Flutter
-- **Comprehensive documentation** for all components
+This repository contains backend microservices built with Go, featuring clean architecture and modern development practices.
 
 ## Repository Structure
 
 ```
 .
-├── server/                 # Backend Go microservices
-│   ├── pkg/               # Shared infrastructure packages
-│   ├── services/          # Microservices
-│   ├── Makefile           # Build automation
-│   └── docker-compose.yml # Service orchestration
-├── client/                # Frontend React.js application
-├── flutter/               # Mobile Flutter application
+├── pkg/                   # Shared infrastructure packages
+├── services/              # Microservices
+│   ├── cms-admin-service/     # Main content management
+│   ├── cms-stats-service/     # Comments & statistics
+│   ├── cms-frontend-service/  # Public API with caching
+│   ├── cms-media-service/     # Media processing
+│   └── cms-crawler-service/   # Content crawler
 ├── docs/                  # Project documentation
 │   ├── README.md          # Detailed documentation
 │   ├── README_VI.md       # Vietnamese documentation
 │   └── ARCHITECTURE.md    # Architecture details
+├── Makefile               # Build automation
+├── docker-compose.yml     # Service orchestration
+├── go.mod                 # Go module definition
 └── .github/workflows/     # CI/CD pipelines
 ```
 
-## Components
+## Microservices
 
-### 🖥️ Server (Backend)
+### 🖥️ Backend Services
 Go-based microservices with clean architecture:
-- **CMS Admin Service** - Content management, permissions, workflows
-- **CMS Stats Service** - Comments, likes, statistics
-- **CMS Frontend Service** - Public-facing API with caching
-- **CMS Media Service** - Media processing and storage
-- **CMS Crawler Service** - Automated content collection
+- **CMS Admin Service** (Port 8080) - Content management, permissions, workflows
+- **CMS Stats Service** (Port 8081) - Comments, likes, statistics
+- **CMS Frontend Service** (Port 8082) - Public-facing API with caching
+- **CMS Media Service** (Port 8083) - Media processing and storage
+- **CMS Crawler Service** (Port 8084) - Automated content collection
 
-📖 See [server/README.md](docs/README.md) for detailed backend documentation.
-
-### 🌐 Client (Frontend)
-React.js web application for content management interface.
-
-📖 See [client/README.md](client/README.md) for frontend documentation.
-
-### 📱 Flutter (Mobile)
-Cross-platform mobile application for iOS and Android.
-
-📖 See [flutter/README.md](flutter/README.md) for mobile app documentation.
+📖 See [docs/README.md](docs/README.md) for detailed documentation.
 
 ## Quick Start
 
-### Backend Services
+### Using Docker Compose (Recommended)
+
 ```bash
-cd server
+# Start all services
 docker-compose up -d
+
+# Check services health
+curl http://localhost:8080/health  # CMS Admin Service
+curl http://localhost:8081/health  # CMS Stats Service
+curl http://localhost:8082/health  # CMS Frontend Service
+curl http://localhost:8083/health  # CMS Media Service
+curl http://localhost:8084/health  # CMS Crawler Service
 ```
 
-### Frontend Application
+### Local Development
+
 ```bash
-cd client
-# Instructions coming soon
+# Install dependencies
+go mod download
+
+# Run a specific service
+cd services/cms-admin-service
+go run cmd/main.go
 ```
 
-### Mobile Application
+
+## Development Commands
+
 ```bash
-cd flutter
-# Instructions coming soon
+# Build all services
+make build
+
+# Build specific service
+make build-admin
+make build-stats
+make build-frontend
+make build-media
+make build-crawler
+
+# Run tests
+make test              # All tests
+make test-pkg          # Shared infrastructure tests
+make test-services     # Service-specific tests
+make test-coverage     # Generate coverage report
+
+# Linting and formatting
+make lint              # Run linters and format code
+make golangci-lint     # Run golangci-lint
+
+# Docker operations
+make docker-build      # Build all Docker images
+make docker-up         # Start all services
+make docker-down       # Stop all services
+make docker-logs       # View logs
+```
+
+## Configuration
+
+Environment variables:
+
+```bash
+# Database
+MONGODB_URI=mongodb://localhost:27017
+MONGODB_DATABASE=cms
+
+# Cache
+REDIS_ADDR=localhost:6379
+REDIS_PASSWORD=
+REDIS_DB=0
+
+# Server
+SERVER_PORT=8080
+BASE_URL=http://localhost:8080
+
+# Features
+RUN_MIGRATIONS=true
+CACHE_TTL=300
+LOG_LEVEL=info
 ```
 
 ## Features
@@ -88,7 +139,7 @@ For more features and detailed information, see [docs/README.md](docs/README.md)
 - **[Backend Documentation](docs/README.md)** - Complete backend microservices documentation
 - **[Architecture Guide](docs/ARCHITECTURE.md)** - System architecture and design patterns
 - **[Vietnamese Documentation](docs/README_VI.md)** - Tài liệu tiếng Việt
-- **[Development Guide](server/services/cms-admin-service/docs/DEVELOPMENT.md)** - Development and extension guide
+- **[Development Guide](services/cms-admin-service/docs/DEVELOPMENT.md)** - Development and extension guide
 
 ## Contributing
 
