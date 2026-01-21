@@ -4,8 +4,6 @@
 node_modules/
 vendor/
 .go/pkg/mod/
-.gradle/
-.mvn/
 
 # ========================
 # Build outputs
@@ -17,7 +15,6 @@ bin/
 coverage/
 .next/
 .nuxt/
-.target/
 
 # ========================
 # Logs & runtime
@@ -26,29 +23,14 @@ coverage/
 logs/
 tmp/
 temp/
-.cache/
-.npm/
-.yarn/
 
 # ========================
 # Environment & secrets
 # ========================
-.env
-.env.*
 *.pem
 *.key
 *.crt
 *.p12
-
-# ========================
-# IDE / OS files
-# ========================
-.vscode/
-.idea/
-*.swp
-*.swo
-.DS_Store
-Thumbs.db
 
 # ========================
 # Databases & dumps
@@ -69,16 +51,7 @@ media/
 uploads/
 
 # ========================
-# Package managers
+# IDE
 # ========================
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-composer.lock
-go.sum
-
-# ========================
-# Monorepo helpers (nếu có)
-# ========================
-**/generated/
-**/migrations/*.sql
+.vscode/
+.idea/
